@@ -1,11 +1,14 @@
 import React from 'react';
-import { StyleSheet, View, TouchableOpacity, Text, Dimensions, ImageBackground } from 'react-native';
+import { StyleSheet, View, TouchableOpacity, Text, Dimensions } from 'react-native';
 import { Image } from 'expo-image';
 import { StatusBar } from 'expo-status-bar';
+import { useRouter } from 'expo-router';
 
 const { width, height } = Dimensions.get('window');
 
 export default function Index() {
+  const router = useRouter();
+
   return (
     <View style={styles.container}>
       <StatusBar style="light" />
@@ -33,12 +36,25 @@ export default function Index() {
 
         {/* CTA Section */}
         <View style={styles.ctaContainer}>
-          <TouchableOpacity style={styles.primaryButton} activeOpacity={0.8}>
+          <TouchableOpacity 
+            style={styles.primaryButton} 
+            activeOpacity={0.8}
+            onPress={() => router.push('/explore')}
+          >
             <Text style={styles.primaryButtonText}>Start Exploring</Text>
           </TouchableOpacity>
 
+        
+
           <TouchableOpacity style={styles.secondaryButton}>
             <Text style={styles.secondaryButtonText}>Sign In / Register</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity 
+            style={styles.adminButton}
+            onPress={() => router.push('/admin')}
+          >
+            <Text style={styles.adminButtonText}>Admin Panel (Temp)</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -132,6 +148,20 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '500',
     textDecorationLine: 'underline',
+  },
+  adminButton: {
+    marginTop: 10,
+    padding: 10,
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  adminButtonText: {
+    color: 'rgba(255, 255, 255, 0.6)',
+    fontSize: 14,
+    fontWeight: '400',
   },
   footerContainer: {
     position: 'absolute',
