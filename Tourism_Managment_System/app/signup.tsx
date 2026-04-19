@@ -18,17 +18,18 @@ import { Image } from 'expo-image';
 
 const API_URL = Platform.OS === 'android' ? 'http://10.0.2.2:5000' : 'http://localhost:5000';
 
-export default function LoginScreen() {
+export default function SignupScreen() {
   const router = useRouter();
   
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
 
-  const handleLogin = async () => {
-    if (!email || !password) {
-      setErrorMsg('Please enter both email and password.');
+  const handleSignup = async () => {
+    if (!name || !email || !password) {
+      setErrorMsg('Please fill in all fields.');
       return;
     }
     
@@ -36,30 +37,25 @@ export default function LoginScreen() {
     setLoading(true);
     
     try {
-      const response = await fetch(`${API_URL}/api/users/login`, {
+      const response = await fetch(`${API_URL}/api/users/register`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ name, email, password }),
       });
 
       const data = await response.json();
 
       if (response.ok) {
-        // Here you could save data.token to AsyncStorage
-        console.log('✅ Login successful:', data.email, 'Role:', data.role);
-        
-        if (data.role === 'admin') {
-          router.replace('/admin');
-        } else {
-          router.replace('/explore');
-        }
+        console.log('✅ Registration successful:', data.email);
+        Alert.alert('Success', 'Account created successfully!');
+        router.replace('/');
       } else {
-        setErrorMsg(data.message || 'Invalid credentials');
+        setErrorMsg(data.message || 'Registration failed');
       }
     } catch (error) {
-      console.error('Login Error:', error);
+      console.error('Signup Error:', error);
       setErrorMsg('Unable to connect to server.');
     } finally {
       setLoading(false);
@@ -94,8 +90,8 @@ export default function LoginScreen() {
 
         <View style={styles.content}>
           <View style={styles.titleContainer}>
-            <Text style={styles.welcomeText}>Welcome back</Text>
-            <Text style={styles.subtitleText}>Sign in to access your administrative dashboard</Text>
+            <Text style={styles.welcomeText}>Create an Account</Text>
+            <Text style={styles.subtitleText}>Sign up to start managing your trips</Text>
           </View>
 
           {errorMsg ? (
@@ -106,6 +102,17 @@ export default function LoginScreen() {
           ) : null}
 
           <View style={styles.formContainer}>
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Username</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="e.g. TravelGuru"
+                value={name}
+                onChangeText={(text) => { setName(text); setErrorMsg(''); }}
+                autoCapitalize="words"
+              />
+            </View>
+
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Email Address</Text>
               <TextInput
@@ -122,34 +129,31 @@ export default function LoginScreen() {
               <Text style={styles.label}>Password</Text>
               <TextInput
                 style={styles.input}
-                placeholder="Enter your password"
+                placeholder="Create a password"
                 value={password}
                 onChangeText={(text) => { setPassword(text); setErrorMsg(''); }}
                 secureTextEntry
               />
             </View>
 
-            <TouchableOpacity style={styles.forgotPassword}>
-              <Text style={styles.forgotPasswordText}>Forgot password?</Text>
-            </TouchableOpacity>
-
             <TouchableOpacity 
               style={[styles.loginButton, loading && { opacity: 0.8 }]} 
-              onPress={handleLogin}
+              onPress={handleSignup}
               disabled={loading}
               activeOpacity={0.8}
             >
               {loading ? (
                 <ActivityIndicator color="#FFF" />
               ) : (
-                <Text style={styles.loginButtonText}>Sign In</Text>
+                <Text style={styles.loginButtonText}>Sign Up</Text>
+              
               )}
             </TouchableOpacity>
 
             <View style={styles.footerRow}>
-              <Text style={styles.footerText}>Don't have an account? </Text>
-              <TouchableOpacity onPress={() => router.replace('/signup')}>
-                <Text style={styles.footerLink}>Sign Up</Text>
+              <Text style={styles.footerText}>Already have an account? </Text>
+              <TouchableOpacity onPress={() => router.replace('/login')}>
+                <Text style={styles.footerLink}>Sign In</Text>
               </TouchableOpacity>
             </View>
             
@@ -175,7 +179,7 @@ const styles = StyleSheet.create({
   },
   overlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.65)', // Darker overlay to make forms and text readable
+    backgroundColor: 'rgba(0, 0, 0, 0.65)',
   },
   header: {
     paddingHorizontal: 20,
@@ -250,15 +254,6 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
     elevation: 3,
   },
-  forgotPassword: {
-    alignSelf: 'flex-end',
-    marginBottom: 30,
-  },
-  forgotPasswordText: {
-    color: '#E2E8F0',
-    fontSize: 14,
-    fontWeight: '600',
-  },
   loginButton: {
     backgroundColor: '#003580',
     borderRadius: 12,
@@ -270,6 +265,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 10,
     elevation: 5,
+    marginTop: 10,
   },
   loginButtonText: {
     color: '#FFF',
