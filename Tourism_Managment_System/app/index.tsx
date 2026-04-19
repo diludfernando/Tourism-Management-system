@@ -46,7 +46,10 @@ export default function Index() {
 
         
 
-          <TouchableOpacity style={styles.secondaryButton}>
+          <TouchableOpacity 
+            style={styles.secondaryButton}
+            onPress={() => router.push('/login')}
+          >
             <Text style={styles.secondaryButtonText}>Sign In / Register</Text>
           </TouchableOpacity>
 

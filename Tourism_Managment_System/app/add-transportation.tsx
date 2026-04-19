@@ -10,7 +10,10 @@ import {
   KeyboardAvoidingView, 
   Platform,
   Alert,
-  ActivityIndicator
+  ActivityIndicator,
+  Modal,
+  FlatList,
+  Dimensions
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -21,12 +24,23 @@ import { Image } from 'expo-image';
 // Use your machine's local IP (e.g., http://192.168.1.5:5000) if testing on a real device
 const API_URL = Platform.OS === 'android' ? 'http://10.0.2.2:5000' : 'http://localhost:5000';
 
+const VEHICLE_TYPES = [
+  'Car',
+  'Van',
+  'Bus',
+  'SUV',
+  'Mini Bus',
+  'Luxury Car',
+  'Motorbike',
+  'Other'
+];
+
 export default function AddTransportationScreen() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [showVehicleTypePicker, setShowVehicleTypePicker] = useState(false);
   const [image, setImage] = useState<string | null>(null);
   const [formData, setFormData] = useState({
-    vehicleName: '',
     vehicleType: '',
     brandModel: '',
     plateNumber: '',
@@ -51,9 +65,9 @@ export default function AddTransportationScreen() {
   };
 
   const handleSave = async () => {
-    const { vehicleName, vehicleType, plateNumber, capacity, price } = formData;
+    const { vehicleType, plateNumber, capacity, price } = formData;
     
-    if (!vehicleName || !vehicleType || !plateNumber || !capacity || !price) {
+    if (!vehicleType || !plateNumber || !capacity || !price) {
       Alert.alert('Required Fields', 'Please fill in all mandatory fields.');
       return;
     }
@@ -162,23 +176,19 @@ export default function AddTransportationScreen() {
             </View>
 
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>Vehicle Name *</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="e.g. Luxury Tour Bus"
-                value={formData.vehicleName}
-                onChangeText={(text) => updateField('vehicleName', text)}
-              />
-            </View>
-
-            <View style={styles.inputGroup}>
               <Text style={styles.label}>Vehicle Type *</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="e.g. Bus, Van, Car"
-                value={formData.vehicleType}
-                onChangeText={(text) => updateField('vehicleType', text)}
-              />
+              <TouchableOpacity 
+                style={styles.pickerButton} 
+                onPress={() => setShowVehicleTypePicker(true)}
+              >
+                <Text style={[
+                  styles.pickerValue, 
+                  !formData.vehicleType && styles.placeholderText
+                ]}>
+                  {formData.vehicleType || 'Select Vehicle Type'}
+                </Text>
+                <Ionicons name="chevron-down" size={20} color="#888" />
+              </TouchableOpacity>
             </View>
 
             <View style={styles.inputGroup}>
@@ -252,6 +262,52 @@ export default function AddTransportationScreen() {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      {/* Vehicle Type Picker Modal */}
+      <Modal
+        visible={showVehicleTypePicker}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setShowVehicleTypePicker(false)}
+      >
+        <TouchableOpacity 
+          style={styles.modalOverlay} 
+          activeOpacity={1} 
+          onPress={() => setShowVehicleTypePicker(false)}
+        >
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Select Vehicle Type</Text>
+              <TouchableOpacity onPress={() => setShowVehicleTypePicker(false)}>
+                <Ionicons name="close" size={24} color="#333" />
+              </TouchableOpacity>
+            </View>
+            <FlatList
+              data={VEHICLE_TYPES}
+              keyExtractor={(item) => item}
+              renderItem={({ item }) => (
+                <TouchableOpacity 
+                  style={styles.typeOption}
+                  onPress={() => {
+                    updateField('vehicleType', item);
+                    setShowVehicleTypePicker(false);
+                  }}
+                >
+                  <Text style={[
+                    styles.typeOptionText,
+                    formData.vehicleType === item && styles.selectedTypeOptionText
+                  ]}>
+                    {item}
+                  </Text>
+                  {formData.vehicleType === item && (
+                    <Ionicons name="checkmark-sharp" size={20} color="#003580" />
+                  )}
+                </TouchableOpacity>
+              )}
+            />
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -363,6 +419,67 @@ const styles = StyleSheet.create({
   submitButtonText: {
     color: '#FFF',
     fontSize: 18,
+    fontWeight: 'bold',
+  },
+  pickerButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#F9F9F9',
+    borderWidth: 1,
+    borderColor: '#DDD',
+    borderRadius: 10,
+    paddingHorizontal: 15,
+    paddingVertical: 12,
+  },
+  pickerValue: {
+    fontSize: 16,
+    color: '#333',
+  },
+  placeholderText: {
+    color: '#888',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: '#FFF',
+    borderTopLeftRadius: 25,
+    borderTopRightRadius: 25,
+    paddingHorizontal: 20,
+    paddingBottom: 40,
+    maxHeight: Dimensions.get('window').height * 0.6,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#EEE',
+    marginBottom: 10,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  typeOption: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F5F5F5',
+  },
+  typeOptionText: {
+    fontSize: 17,
+    color: '#444',
+  },
+  selectedTypeOptionText: {
+    color: '#003580',
     fontWeight: 'bold',
   },
 });

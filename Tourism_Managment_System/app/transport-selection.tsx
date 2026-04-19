@@ -20,7 +20,6 @@ const API_URL = Platform.OS === 'android' ? 'http://10.0.2.2:5000' : 'http://loc
 
 interface Vehicle {
   _id: string;
-  vehicleName: string;
   vehicleType: string;
   brandModel?: string;
   plateNumber: string;
@@ -98,11 +97,8 @@ export default function TransportSelectionScreen() {
       {/* Content Section */}
       <View style={styles.cardContent}>
         <View style={styles.mainInfo}>
-          <Text style={styles.vehicleNameText}>{item.vehicleName}</Text>
-          <Text style={styles.brandModelText}>{item.brandModel || 'Luxury Edition'}</Text>
+          <Text style={styles.vehicleNameText}>{item.brandModel || `${item.vehicleType} Vehicle`}</Text>
         </View>
-
-        <View style={styles.divider} />
 
         <View style={styles.statsRow}>
           <View style={styles.statItem}>
@@ -124,8 +120,7 @@ export default function TransportSelectionScreen() {
 
         <TouchableOpacity 
           style={styles.actionButton}
-          activeOpacity={0.85}
-          onPress={() => alert(`Reserved: ${item.vehicleName}`)}
+          onPress={() => alert(`Reserved: ${item.brandModel || item.vehicleType}`)}
         >
           <Text style={styles.actionButtonText}>Book Now</Text>
           <Ionicons name="arrow-forward" size={18} color="#FFF" />
@@ -311,26 +306,22 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   vehicleNameText: {
-    fontSize: 22,
+    fontSize: 24,
     fontWeight: '800',
     color: '#1a1a1a',
-    marginBottom: 4,
-    letterSpacing: -0.3,
-  },
-  brandModelText: {
-    fontSize: 14,
-    color: '#6e7c87',
-    fontWeight: '500',
-  },
-  divider: {
-    height: 1,
-    backgroundColor: '#F0F3F5',
-    marginBottom: 16,
+    textTransform: 'capitalize',
+    letterSpacing: -0.5,
   },
   statsRow: {
     flexDirection: 'row',
-    gap: 20,
-    marginBottom: 16,
+    justifyContent: 'space-between',
+    marginBottom: 20,
+    backgroundColor: '#F8F9FA',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#EDF2F7',
   },
   statItem: {
     flexDirection: 'row',
@@ -339,12 +330,12 @@ const styles = StyleSheet.create({
   },
   statText: {
     fontSize: 14,
-    color: '#4a5568',
-    fontWeight: '600',
+    color: '#2D3748',
+    fontWeight: '700',
   },
   descriptionText: {
     fontSize: 14,
-    color: '#718096',
+    color: '#4A5568',
     lineHeight: 22,
     marginBottom: 24,
   },
