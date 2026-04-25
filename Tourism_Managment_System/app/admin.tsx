@@ -98,6 +98,13 @@ export default function AdminScreen() {
             <Ionicons name="bus-outline" size={20} color="#FFF" />
             <Text style={styles.actionButtonText}>Add New Transportation</Text>
           </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={() => router.push('/admin/my-tourpacks/index')}
+          >
+            <Ionicons name="briefcase-outline" size={20} color="#FFF" />
+            <Text style={styles.actionButtonText}>Manage Tour Packages</Text>
+          </TouchableOpacity>
           <TouchableOpacity 
             style={styles.actionButton}
             onPress={() => router.push({ pathname: '/add-hotel', params: { admin: 'true' } })}
