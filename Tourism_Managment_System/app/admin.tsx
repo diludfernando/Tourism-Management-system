@@ -51,11 +51,21 @@ export default function AdminScreen() {
             <Ionicons name="bus-outline" size={20} color="#FFF" />
             <Text style={styles.actionButtonText}>Add New Transportation</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.actionButton}>
+          <TouchableOpacity 
+            style={styles.actionButton}
+            onPress={() => router.push('/add-hotel')}
+          >
             <Ionicons name="home-outline" size={20} color="#FFF" />
-            <Text style={styles.actionButtonText}>Add new Hotel / Acommadation</Text>
+            <Text style={styles.actionButtonText}>Add new Hotel / Accommodation</Text>
           </TouchableOpacity>
           
+          <TouchableOpacity 
+            style={styles.actionButton}
+            onPress={() => router.push('/hotels')}
+          >
+            <Ionicons name="business-outline" size={20} color="#FFF" />
+            <Text style={styles.actionButtonText}>Manage Hotels</Text>
+          </TouchableOpacity>
           <TouchableOpacity style={styles.actionButton}>
             <Ionicons name="calendar-outline" size={20} color="#FFF" />
             <Text style={styles.actionButtonText}>Booking Managment</Text>
