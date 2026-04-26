@@ -15,5 +15,6 @@ app.use(express.urlencoded({ limit: '100mb', extended: true }));
 app.use('/api/status', require('./routes/statusRoutes'));
 app.use('/api/transportation', require('./routes/transportationRoutes'));
 app.use('/api/users', require('./routes/userRoutes'));
+app.use('/api/hotels', require('./routes/hotelRoutes'));
 
 module.exports = app;
