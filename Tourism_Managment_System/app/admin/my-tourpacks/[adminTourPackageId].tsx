@@ -7,8 +7,9 @@ import {
 import { Image } from 'expo-image';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { adminTourpacksEditRoute, adminTourpacksRoute } from '../../../src/routes/adminTourpacks';
+import { adminTourPacksEditRoute, adminTourPacksListRoute } from '../../../src/routes/adminTourpacks';
 import { API_BASE } from '../../../src/config';
+import { getAuthHeaders } from '../../../src/auth';
 
 const { height, width } = Dimensions.get('window');
 
@@ -20,6 +21,7 @@ type TourPack = {
   duration: number;
   destination: string;
   maxGroupSize: number;
+  kilometers: number;
   image: string;
   gallery: { url: string; caption?: string; isFeatured?: boolean }[];
   inclusions: string[];
@@ -29,10 +31,16 @@ type TourPack = {
   featured: boolean;
 };
 
-export default function TourPackDetail() {
+export default function AdminTourPackDetailScreen() {
   const router = useRouter();
-  const { id } = useLocalSearchParams();
-  const tourPackId = Array.isArray(id) ? id[0] : id;
+  const params = useLocalSearchParams();
+  const rawAdminId = (params as any).adminTourPackageId ?? (params as any).tourPackageId ?? (params as any).tourPackId;
+  const rawQueryId = (params as any).id ?? (params as any)._id;
+  const adminTourPackageId = Array.isArray(rawAdminId) ? rawAdminId[0] : rawAdminId;
+  const queryId = Array.isArray(rawQueryId) ? rawQueryId[0] : rawQueryId;
+  const currentTourPackId = adminTourPackageId || queryId;
+
+  console.log('AdminTourPackDetail - resolved ID:', currentTourPackId, 'rawParams:', params);
   const [tourPack, setTourPack] = useState<TourPack | null>(null);
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState(false);
@@ -43,14 +51,21 @@ export default function TourPackDetail() {
 
   useEffect(() => {
     const fetchTourPack = async () => {
-      if (!tourPackId) {
+      if (!currentTourPackId) {
         setError('Tour pack ID is missing.');
         setLoading(false);
         return;
       }
 
+      // Guard against routing to the literal 'index'/'create'/'edit' path being interpreted as an ID
+      if (typeof currentTourPackId === 'string' && /^(index|create|edit)$/i.test(currentTourPackId)) {
+        console.warn('Admin detail opened with invalid id segment:', currentTourPackId);
+        router.replace(adminTourPacksListRoute as any);
+        return;
+      }
+
       try {
-        const response = await fetch(`${API_BASE}/api/tourpacks/${tourPackId}`);
+        const response = await fetch(`${API_BASE}/api/tourpacks/${currentTourPackId}`);
         const data = await response.json();
         if (data.success) {
           setTourPack(data.data);
@@ -64,7 +79,7 @@ export default function TourPackDetail() {
       }
     };
     fetchTourPack();
-  }, [tourPackId]);
+  }, [currentTourPackId]);
 
   if (loading) {
     return (
@@ -82,20 +97,28 @@ export default function TourPackDetail() {
   };
 
   const handleDelete = async () => {
-    if (!tourPackId) {
+    if (!currentTourPackId) {
       Alert.alert('Error', 'Tour pack ID is missing.');
       return;
     }
     setDeleting(true);
     try {
-      const response = await fetch(`${API_BASE}/api/tourpacks/${tourPackId}`, {
+      const authHeaders = await getAuthHeaders();
+      if (!authHeaders.Authorization) {
+        Alert.alert('Session expired', 'Please sign in again as admin.');
+        router.replace('/login');
+        return;
+      }
+
+      const response = await fetch(`${API_BASE}/api/tourpacks/${currentTourPackId}`, {
         method: 'DELETE',
+        headers: authHeaders,
       });
       const data = await response.json();
       if (data.success) {
         setBanner({ type: 'success', message: 'Tour package removed.' });
         setTimeout(() => {
-          router.replace(adminTourpacksRoute);
+          router.replace(adminTourPacksListRoute);
         }, 1500);
       } else {
         setBanner({ type: 'error', message: data.message || 'Delete failed' });
@@ -171,6 +194,11 @@ export default function TourPackDetail() {
           <View style={styles.statItem}>
             <Text style={styles.statValue}>{tourPack.maxGroupSize}</Text>
             <Text style={styles.statLabel}>Max Group</Text>
+          </View>
+          <View style={styles.statDivider} />
+          <View style={styles.statItem}>
+            <Text style={styles.statValue}>{tourPack.kilometers}</Text>
+            <Text style={styles.statLabel}>Km</Text>
           </View>
           <View style={styles.statDivider} />
           <View style={styles.statItem}>
@@ -320,7 +348,7 @@ export default function TourPackDetail() {
           <View style={styles.actionRow}>
             <TouchableOpacity
               style={styles.editBtn}
-              onPress={() => tourPackId && router.push(adminTourpacksEditRoute(tourPackId))}
+              onPress={() => currentTourPackId && router.push(`/admin/my-tourpacks/edit?id=${encodeURIComponent(currentTourPackId)}` as any)}
               activeOpacity={0.85}
             >
               <Text style={styles.editBtnText}>Edit</Text>

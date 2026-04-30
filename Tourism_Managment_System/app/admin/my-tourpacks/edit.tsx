@@ -7,16 +7,19 @@ import {
 import { Image } from 'expo-image';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { adminTourpackDetailRoute } from '../../../src/routes/adminTourpacks';
+import { adminTourPackDetailRoute } from '../../../src/routes/adminTourpacks';
 import * as ImagePicker from 'expo-image-picker';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { API_BASE } from '../../../src/config';
+import { getAuthHeaders } from '../../../src/auth';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-export default function EditTourPack() {
+export default function AdminEditTourPackScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams();
   const tourPackId = Array.isArray(id) ? id[0] : id;
+
+  console.log('AdminEdit - tourPackId:', tourPackId, 'rawParams id:', id);
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -26,7 +29,7 @@ export default function EditTourPack() {
   const [form, setForm] = useState({
     name: '', description: '', price: '',
     duration: '', maxGroupSize: '', destination: '',
-    inclusions: '', availabilityDates: [] as string[],
+    kilometers: '', inclusions: '', availabilityDates: [] as string[],
     category: '', tags: '', featured: false, difficulty: 'moderate',
   });
   const [errors, setErrors] = useState<any>({});
@@ -34,6 +37,7 @@ export default function EditTourPack() {
   const [banner, setBanner] = useState<{type: 'success' | 'error', message: string} | null>(null);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [tempDate, setTempDate] = useState(new Date());
+  
 
   useEffect(() => {
     const fetchTourPack = async () => {
@@ -53,6 +57,7 @@ export default function EditTourPack() {
             description: pack.description || '',
             price: String(pack.price || ''),
             duration: String(pack.duration || ''),
+            kilometers: String(pack.kilometers || ''),
             maxGroupSize: String(pack.maxGroupSize || ''),
             destination: pack.destination || '',
             inclusions: Array.isArray(pack.inclusions) ? pack.inclusions.join(', ') : '',
@@ -220,6 +225,7 @@ export default function EditTourPack() {
       formData.append('description', form.description);
       formData.append('price', form.price);
       formData.append('duration', form.duration);
+      formData.append('kilometers', form.kilometers || '0');
       formData.append('maxGroupSize', form.maxGroupSize || '10');
       formData.append('destination', form.destination);
       if (form.inclusions) {
@@ -281,8 +287,25 @@ export default function EditTourPack() {
         console.log('Gallery files added:', galleryAdded);
       }
 
+      const authHeaders = await getAuthHeaders();
+      console.log('AdminEdit - authHeaders:', authHeaders);
+        if (!authHeaders.Authorization) {
+          console.warn('AdminEdit - no auth header available');
+          // Don't auto-redirect to login to avoid losing unsaved changes.
+          setBanner({ type: 'error', message: 'Session expired or not signed in. Please sign in to save changes.' });
+          // Offer the user to navigate to login explicitly
+          Alert.alert('Not signed in', 'Please sign in as admin to save changes.', [
+            { text: 'Cancel', style: 'cancel' },
+            { text: 'Sign In', onPress: () => router.push('/login') },
+          ]);
+          setSaving(false);
+          return;
+        }
+
+      console.log('AdminEdit - sending PUT to', `${API_BASE}/api/tourpacks/${tourPackId}`);
       const response = await fetch(`${API_BASE}/api/tourpacks/${tourPackId}`, {
         method: 'PUT',
+        headers: authHeaders,
         body: formData,
       });
       
@@ -305,7 +328,7 @@ export default function EditTourPack() {
       if (data.success) {
         setBanner({ type: 'success', message: 'Tour package updated successfully.' });
         setTimeout(() => {
-          router.replace(adminTourpackDetailRoute(tourPackId));
+          router.replace(adminTourPackDetailRoute(tourPackId));
         }, 1500);
       } else {
         setBanner({ type: 'error', message: data.message || 'Could not save package.' });
@@ -320,7 +343,7 @@ export default function EditTourPack() {
 
   const handleCancel = () => {
     if (tourPackId) {
-      router.replace(adminTourpackDetailRoute(tourPackId));
+      router.replace(adminTourPackDetailRoute(tourPackId));
     } else {
       router.back();
     }
@@ -491,17 +514,30 @@ export default function EditTourPack() {
               {errors.duration && <Text style={styles.errText}>{errors.duration}</Text>}
             </View>
           </View>
-          <View style={styles.field}>
-            <Text style={styles.label}>Max Group Size</Text>
-            <TextInput
-              style={[styles.input, errors.maxGroupSize && styles.inputError]}
-              placeholder="e.g. 10"
-              placeholderTextColor="#BBB"
-              value={form.maxGroupSize}
-              onChangeText={value => update('maxGroupSize', value)}
-              keyboardType="numeric"
-            />
-            {errors.maxGroupSize && <Text style={styles.errText}>{errors.maxGroupSize}</Text>}
+          <View style={styles.row}>
+            <View style={[styles.field, { flex: 1, marginRight: 10 }]}>
+              <Text style={styles.label}>Kilometers (Distance)</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="e.g. 150"
+                placeholderTextColor="#BBB"
+                value={form.kilometers}
+                onChangeText={value => update('kilometers', value)}
+                keyboardType="numeric"
+              />
+            </View>
+            <View style={[styles.field, { flex: 1 }]}>
+              <Text style={styles.label}>Max Group Size</Text>
+              <TextInput
+                style={[styles.input, errors.maxGroupSize && styles.inputError]}
+                placeholder="e.g. 10"
+                placeholderTextColor="#BBB"
+                value={form.maxGroupSize}
+                onChangeText={value => update('maxGroupSize', value)}
+                keyboardType="numeric"
+              />
+              {errors.maxGroupSize && <Text style={styles.errText}>{errors.maxGroupSize}</Text>}
+            </View>
           </View>
           <View style={styles.field}>
             <Text style={styles.label}>Inclusions</Text>

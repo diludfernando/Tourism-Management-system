@@ -7,13 +7,14 @@ import {
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { adminTourpacksRoute } from '../../../src/routes/adminTourpacks';
+import { adminTourPacksListRoute } from '../../../src/routes/adminTourpacks';
 import * as ImagePicker from 'expo-image-picker';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { API_BASE } from '../../../src/config';
+import { getAuthHeaders } from '../../../src/auth';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-export default function CreateTourPack() {
+export default function AdminCreateTourPackScreen() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [image, setImage] = useState<any>(null);
@@ -21,7 +22,7 @@ export default function CreateTourPack() {
   const [form, setForm] = useState({
     name: '', description: '', price: '',
     duration: '', maxGroupSize: '', destination: '',
-    inclusions: '', availabilityDates: [] as string[],
+    kilometers: '', inclusions: '', availabilityDates: [] as string[],
     category: '', tags: '', featured: false, difficulty: 'moderate',
   });
   const [errors, setErrors] = useState<any>({});
@@ -136,6 +137,7 @@ export default function CreateTourPack() {
       formData.append('description', form.description);
       formData.append('price', form.price);
       formData.append('duration', form.duration);
+      formData.append('kilometers', form.kilometers || '0');
       formData.append('maxGroupSize', form.maxGroupSize || '10');
       formData.append('destination', form.destination);
       formData.append('category', form.category);
@@ -188,8 +190,16 @@ export default function CreateTourPack() {
         console.log('Gallery files added:', galleryAdded);
       }
 
+      const authHeaders = await getAuthHeaders();
+      if (!authHeaders.Authorization) {
+        Alert.alert('Session expired', 'Please sign in again as admin.');
+        router.replace('/login');
+        return;
+      }
+
       const response = await fetch(`${API_BASE}/api/tourpacks`, {
         method: 'POST',
+        headers: authHeaders,
         body: formData,
       });
 
@@ -200,7 +210,7 @@ export default function CreateTourPack() {
       const data = await response.json();
       if (data.success) {
         Alert.alert('Success! 🎉', 'Tour package created!', [
-          { text: 'View All', onPress: () => router.replace(adminTourpacksRoute) },
+          { text: 'View All', onPress: () => router.replace(adminTourPacksListRoute) },
         ]);
       } else {
         Alert.alert('Error', data.message || 'Something went wrong');
@@ -360,17 +370,30 @@ export default function CreateTourPack() {
             </View>
           </View>
 
-          {/* Max Group Size */}
-          <View style={styles.field}>
-            <Text style={styles.label}>Max Group Size</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="e.g. 10 (default)"
-              placeholderTextColor="#BBB"
-              value={form.maxGroupSize}
-              onChangeText={v => update('maxGroupSize', v)}
-              keyboardType="numeric"
-            />
+          {/* Kilometers & Max Group Size Row */}
+          <View style={styles.row}>
+            <View style={[styles.field, { flex: 1, marginRight: 10 }]}>
+              <Text style={styles.label}>Kilometers (Distance)</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="e.g. 150"
+                placeholderTextColor="#BBB"
+                value={form.kilometers}
+                onChangeText={v => update('kilometers', v)}
+                keyboardType="numeric"
+              />
+            </View>
+            <View style={[styles.field, { flex: 1 }]}>
+              <Text style={styles.label}>Max Group Size</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="e.g. 10 (default)"
+                placeholderTextColor="#BBB"
+                value={form.maxGroupSize}
+                onChangeText={v => update('maxGroupSize', v)}
+                keyboardType="numeric"
+              />
+            </View>
           </View>
 
           {/* Inclusions */}

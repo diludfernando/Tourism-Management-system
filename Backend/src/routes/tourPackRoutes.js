@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const multer = require('multer');
 const path = require('path');
+const fs = require('fs');
 const {
   createTourPack,
   getAllTourPacks,
@@ -9,10 +10,16 @@ const {
   updateTourPack,
   deleteTourPack
 } = require('../controllers/tourPackController');
+const { protect, adminOnly } = require('../middleware/authMiddleware');
+
+const uploadDir = path.join(__dirname, '..', 'uploads');
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir, { recursive: true });
+}
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, 'src/uploads/');
+    cb(null, uploadDir);
   },
   filename: (req, file, cb) => {
     cb(null, 'tourpack-' + Date.now() + path.extname(file.originalname));
@@ -55,10 +62,10 @@ const handleMulterError = (err, req, res, next) => {
   next();
 };
 
-router.post('/', logUploadRequest, uploadMixed, handleMulterError, createTourPack);
+router.post('/', protect, adminOnly, logUploadRequest, uploadMixed, handleMulterError, createTourPack);
 router.get('/', getAllTourPacks);
 router.get('/:id', getTourPackById);
-router.put('/:id', logUploadRequest, uploadMixed, handleMulterError, updateTourPack);
-router.delete('/:id', deleteTourPack);
+router.put('/:id', protect, adminOnly, logUploadRequest, uploadMixed, handleMulterError, updateTourPack);
+router.delete('/:id', protect, adminOnly, deleteTourPack);
 
 module.exports = router;

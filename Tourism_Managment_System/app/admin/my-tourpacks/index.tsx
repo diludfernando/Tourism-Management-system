@@ -6,7 +6,7 @@ import {
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { adminTourpackDetailRoute, adminTourpacksCreateRoute } from '../../../src/routes/adminTourpacks';
+import { adminTourPackDetailRoute, adminTourPacksCreateRoute } from '../../../src/routes/adminTourpacks';
 import { API_BASE } from '../../../src/config';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -20,6 +20,7 @@ type TourPack = {
   duration: number;
   destination: string;
   maxGroupSize: number;
+  kilometers: number;
   image: string;
   inclusions: string[];
   category: string;
@@ -40,6 +41,8 @@ export default function TourPackList() {
   const [maxPrice, setMaxPrice] = useState('');
   const [minDuration, setMinDuration] = useState('');
   const [maxDuration, setMaxDuration] = useState('');
+  const [minKilometers, setMinKilometers] = useState('');
+  const [maxKilometers, setMaxKilometers] = useState('');
   const [selectedDifficulty, setSelectedDifficulty] = useState('');
   const [sortBy, setSortBy] = useState('featured');
   const latestRequestIdRef = useRef(0);
@@ -49,6 +52,8 @@ export default function TourPackList() {
     setMaxPrice('');
     setMinDuration('');
     setMaxDuration('');
+    setMinKilometers('');
+    setMaxKilometers('');
     setSelectedDifficulty('');
     setSortBy('featured');
   };
@@ -65,6 +70,8 @@ export default function TourPackList() {
     maxPrice ? { key: 'maxPrice', label: `Max ${formatPriceChip(maxPrice)}`, onRemove: () => setMaxPrice('') } : null,
     minDuration ? { key: 'minDuration', label: `Min ${minDuration} days`, onRemove: () => setMinDuration('') } : null,
     maxDuration ? { key: 'maxDuration', label: `Max ${maxDuration} days`, onRemove: () => setMaxDuration('') } : null,
+    minKilometers ? { key: 'minKilometers', label: `Min ${minKilometers}km`, onRemove: () => setMinKilometers('') } : null,
+    maxKilometers ? { key: 'maxKilometers', label: `Max ${maxKilometers}km`, onRemove: () => setMaxKilometers('') } : null,
     selectedDifficulty
       ? {
           key: 'difficulty',
@@ -93,6 +100,8 @@ export default function TourPackList() {
       if (maxPrice.trim()) params.append('maxPrice', maxPrice.trim());
       if (minDuration.trim()) params.append('minDuration', minDuration.trim());
       if (maxDuration.trim()) params.append('maxDuration', maxDuration.trim());
+      if (minKilometers.trim()) params.append('minKilometers', minKilometers.trim());
+      if (maxKilometers.trim()) params.append('maxKilometers', maxKilometers.trim());
       if (selectedDifficulty.trim()) params.append('difficulty', selectedDifficulty.trim());
       if (sortBy.trim()) params.append('sortBy', sortBy.trim());
 
@@ -123,7 +132,7 @@ export default function TourPackList() {
 
   useEffect(() => {
     fetchTourPacks();
-  }, [minPrice, maxPrice, minDuration, maxDuration, selectedDifficulty, sortBy]);
+  }, [minPrice, maxPrice, minDuration, maxDuration, minKilometers, maxKilometers, selectedDifficulty, sortBy]);
 
   const filteredTourPacks = tourPacks.filter(pack =>
     pack.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -135,7 +144,7 @@ export default function TourPackList() {
     <TouchableOpacity
       style={styles.card}
       activeOpacity={0.92}
-      onPress={() => router.push(adminTourpackDetailRoute(item._id))}
+      onPress={() => router.push(`/admin/my-tourpacks/${encodeURIComponent(item._id)}` as any)}
     >
       {/* Background Image */}
       <Image
@@ -159,6 +168,9 @@ export default function TourPackList() {
         </View>
         <View style={styles.groupPill}>
           <Text style={styles.groupText}>👥 {item.maxGroupSize}</Text>
+        </View>
+        <View style={styles.groupPill}>
+          <Text style={styles.groupText}>📍 {item.kilometers}km</Text>
         </View>
       </View>
 
@@ -207,7 +219,7 @@ export default function TourPackList() {
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.addBtn}
-                onPress={() => router.push(adminTourpacksCreateRoute)}
+                onPress={() => router.push(adminTourPacksCreateRoute as any)}
               >
                 <Text style={styles.addBtnText}>+ Add</Text>
               </TouchableOpacity>
@@ -367,6 +379,27 @@ export default function TourPackList() {
                 keyboardType="numeric"
                 value={maxDuration}
                 onChangeText={setMaxDuration}
+              />
+            </View>
+          </View>
+
+          <View style={styles.filterGroup}>
+            <Text style={styles.filterLabel}>Distance (Kilometers)</Text>
+            <View style={styles.priceInputRow}>
+              <TextInput
+                style={styles.filterInput}
+                placeholder="Min"
+                keyboardType="numeric"
+                value={minKilometers}
+                onChangeText={setMinKilometers}
+              />
+              <Text style={styles.separator}>-</Text>
+              <TextInput
+                style={styles.filterInput}
+                placeholder="Max"
+                keyboardType="numeric"
+                value={maxKilometers}
+                onChangeText={setMaxKilometers}
               />
             </View>
           </View>

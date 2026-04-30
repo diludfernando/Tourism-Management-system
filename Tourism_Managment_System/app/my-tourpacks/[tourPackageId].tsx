@@ -18,6 +18,7 @@ type TourPack = {
   duration: number;
   destination: string;
   maxGroupSize: number;
+  kilometers: number;
   image: string;
   gallery?: { url: string; caption: string; isFeatured: boolean }[];
   inclusions: string[];
@@ -27,10 +28,10 @@ type TourPack = {
   featured: boolean;
 };
 
-export default function TourPackDetail() {
+export default function TourPackDetailScreen() {
   const router = useRouter();
-  const { id } = useLocalSearchParams();
-  const tourPackId = Array.isArray(id) ? id[0] : id;
+  const { tourPackageId } = useLocalSearchParams();
+  const currentTourPackId = Array.isArray(tourPackageId) ? tourPackageId[0] : tourPackageId;
   const [tourPack, setTourPack] = useState<TourPack | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -39,14 +40,14 @@ export default function TourPackDetail() {
 
   useEffect(() => {
     const fetchTourPack = async () => {
-      if (!tourPackId) {
+      if (!currentTourPackId) {
         setError('Tour pack ID is missing.');
         setLoading(false);
         return;
       }
 
       try {
-        const response = await fetch(`${API_BASE}/api/tourpacks/${tourPackId}`);
+        const response = await fetch(`${API_BASE}/api/tourpacks/${currentTourPackId}`);
         const data = await response.json();
         if (data.success) {
           setTourPack(data.data);
@@ -60,7 +61,7 @@ export default function TourPackDetail() {
       }
     };
     fetchTourPack();
-  }, [tourPackId]);
+  }, [currentTourPackId]);
 
   if (loading) {
     return (
@@ -123,6 +124,11 @@ export default function TourPackDetail() {
           <View style={styles.statItem}>
             <Text style={styles.statValue}>{tourPack.maxGroupSize}</Text>
             <Text style={styles.statLabel}>Max Group</Text>
+          </View>
+          <View style={styles.statDivider} />
+          <View style={styles.statItem}>
+            <Text style={styles.statValue}>{tourPack.kilometers}</Text>
+            <Text style={styles.statLabel}>Km</Text>
           </View>
           <View style={styles.statDivider} />
           <View style={styles.statItem}>

@@ -69,6 +69,7 @@ exports.getAllTourPacks = async (req, res) => {
 
 exports.getTourPackById = async (req, res) => {
   try {
+    console.log('getTourPackById - id:', req.params.id);
     const tourPack = await TourPack.findById(req.params.id);
     if (!tourPack) return res.status(404).json({ success: false, message: 'Tour pack not found' });
     res.status(200).json({ success: true, data: tourPack });
