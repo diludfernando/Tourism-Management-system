@@ -16,11 +16,7 @@ export default function AdminScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color="#000" />
-        </TouchableOpacity>
         <Text style={styles.headerTitle}>Admin Dashboard</Text>
-        <View style={{ width: 44 }} /> 
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
@@ -93,15 +89,12 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
     paddingHorizontal: 20,
     paddingVertical: 15,
     backgroundColor: '#FFF',
     borderBottomWidth: 1,
     borderBottomColor: '#EEE',
-  },
-  backButton: {
-    padding: 10,
   },
   headerTitle: {
     fontSize: 20,
