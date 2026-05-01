@@ -142,6 +142,14 @@ const createBooking = async (req, res) => {
       if (!tourPack) {
         return res.status(404).json({ message: 'Selected tour package was not found' });
       }
+
+      // Backend validation for group size
+      if (parsedGuests > tourPack.maxGroupSize) {
+        return res.status(400).json({ 
+          message: `The number of attendees (${parsedGuests}) exceeds the maximum group size for this tour (${tourPack.maxGroupSize}).` 
+        });
+      }
+
       packageAmount = packageAmountFromReq || (tourPack.price * parsedGuests);
     } else {
       return res.status(400).json({ message: 'Either a hotel or a tour package must be selected' });

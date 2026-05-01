@@ -8,7 +8,7 @@ const addTransportation = async (req, res) => {
     console.log('\x1b[35m%s\x1b[0m', '📩 [POST] /api/transportation - Request Received');
     console.log('Body:', { ...req.body, vehicleImage: req.body.vehicleImage ? '[Image Data]' : 'No Image' });
 
-    const { vehicleType, brandModel, plateNumber, capacity, price, description, vehicleImage } = req.body;
+    const { vehicleType, brandModel, plateNumber, capacity, price, description, vehicleImage, contactNumber } = req.body;
 
     // Check if plate number already exists
     const vehicleExists = await Transportation.findOne({ plateNumber });
@@ -25,6 +25,7 @@ const addTransportation = async (req, res) => {
       price,
       description,
       vehicleImage,
+      contactNumber,
     });
 
     if (transportation) {
@@ -73,7 +74,7 @@ const getTransportationById = async (req, res) => {
 // @access  Admin
 const updateTransportation = async (req, res) => {
   try {
-    const { vehicleType, brandModel, plateNumber, capacity, price, description, vehicleImage } = req.body;
+    const { vehicleType, brandModel, plateNumber, capacity, price, description, vehicleImage, contactNumber } = req.body;
 
     const transportation = await Transportation.findById(req.params.id);
 
@@ -84,6 +85,7 @@ const updateTransportation = async (req, res) => {
       transportation.capacity = capacity || transportation.capacity;
       transportation.price = price || transportation.price;
       transportation.description = description || transportation.description;
+      transportation.contactNumber = contactNumber || transportation.contactNumber;
       if (vehicleImage) {
         transportation.vehicleImage = vehicleImage;
       }

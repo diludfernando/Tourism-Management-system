@@ -43,11 +43,12 @@ const formatPrice = (value: number) =>
 
 export default function HotelDetailsScreen() {
   const router = useRouter();
-  const { id, transportId, tourPackId, admin } = useLocalSearchParams<{ 
+  const { id, transportId, tourPackId, admin, persons } = useLocalSearchParams<{ 
     id?: string; 
     transportId?: string; 
     tourPackId?: string; 
-    admin?: string 
+    admin?: string;
+    persons?: string;
   }>();
   const [hotel, setHotel] = useState<Hotel | null>(null);
   const [loading, setLoading] = useState(true);
@@ -63,13 +64,13 @@ export default function HotelDetailsScreen() {
       } else if (isSelectionMode) {
         router.push({
           pathname: '/hotels',
-          params: { transportId, tourPackId },
+          params: { transportId, tourPackId, persons },
         });
       } else {
         router.push('/explore');
       }
     }
-  }, [isAdminMode, isSelectionMode, router, transportId, tourPackId]);
+  }, [isAdminMode, isSelectionMode, router, transportId, tourPackId, persons]);
 
   const fetchHotelDetails = useCallback(async () => {
     if (!id) {
@@ -265,6 +266,7 @@ export default function HotelDetailsScreen() {
                   hotelId: hotel._id,
                   ...(transportId ? { transportId } : {}),
                   ...(tourPackId ? { tourPackId } : {}),
+                  ...(persons ? { persons } : {}),
                 },
               })
             }

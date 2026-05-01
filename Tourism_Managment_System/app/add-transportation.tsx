@@ -47,6 +47,7 @@ export default function AddTransportationScreen() {
     capacity: '',
     price: '',
     description: '',
+    contactNumber: '',
   });
   const isAdminMode = admin === 'true';
 
@@ -255,6 +256,17 @@ export default function AddTransportationScreen() {
                 numberOfLines={4}
                 value={formData.description}
                 onChangeText={(text) => updateField('description', text)}
+              />
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Contact Number</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="e.g. +94 77 123 4567"
+                keyboardType="phone-pad"
+                value={formData.contactNumber}
+                onChangeText={(text) => updateField('contactNumber', text)}
               />
             </View>
 

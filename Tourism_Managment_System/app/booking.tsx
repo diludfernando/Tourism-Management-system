@@ -124,10 +124,11 @@ const getCalendarDays = (monthDate: Date) => {
 
 export default function BookingScreen() {
   const router = useRouter();
-  const { hotelId, tourPackId, transportId } = useLocalSearchParams<{
+  const { hotelId, tourPackId, transportId, persons } = useLocalSearchParams<{
     hotelId?: string;
     tourPackId?: string;
-    transportId?: string
+    transportId?: string;
+    persons?: string;
   }>();
   const [hotel, setHotel] = useState<Hotel | null>(null);
   const [tourPack, setTourPack] = useState<any | null>(null);
@@ -229,6 +230,16 @@ export default function BookingScreen() {
   useEffect(() => {
     setSelectedTransport(transportId ?? '');
   }, [transportId]);
+
+  useEffect(() => {
+    if (persons) {
+      setFormData((prev) => ({
+        ...prev,
+        adults: persons,
+        children: '0', // Assuming the selection from tour-details is total persons
+      }));
+    }
+  }, [persons]);
 
   const checkInDateValue = parseDateString(formData.checkInDate);
   const checkOutDateValue = parseDateString(formData.checkOutDate);

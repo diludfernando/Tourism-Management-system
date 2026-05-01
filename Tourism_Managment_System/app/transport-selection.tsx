@@ -33,11 +33,17 @@ interface Vehicle {
   price: number;
   description?: string;
   vehicleImage?: string;
+  contactNumber?: string;
 }
 
 export default function TransportSelectionScreen() {
   const router = useRouter();
-  const { hotelId, tourPackId } = useLocalSearchParams<{ hotelId?: string; tourPackId?: string }>();
+  const { hotelId, tourPackId, persons } = useLocalSearchParams<{ 
+    hotelId?: string; 
+    tourPackId?: string;
+    persons?: string;
+  }>();
+  const parsedPersons = Number.parseInt(persons || '1', 10);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -117,6 +123,7 @@ export default function TransportSelectionScreen() {
             <Ionicons name="id-card" size={18} color="#003580" />
             <Text style={styles.statText}>{item.plateNumber}</Text>
           </View>
+
         </View>
 
         {item.description && (
@@ -125,21 +132,37 @@ export default function TransportSelectionScreen() {
           </Text>
         )}
 
+        {parsedPersons > item.capacity ? (
+          <View style={styles.capacityWarning}>
+            <Ionicons name="alert-circle" size={16} color="#D32F2F" />
+            <Text style={styles.capacityWarningText}>
+              Too many people for this vehicle ({parsedPersons} vs {item.capacity})
+            </Text>
+          </View>
+        ) : null}
+
         <TouchableOpacity 
-          style={styles.actionButton}
+          style={[
+            styles.actionButton,
+            parsedPersons > item.capacity && styles.disabledButton
+          ]}
+          disabled={parsedPersons > item.capacity}
           onPress={() => {
             router.push({
-              pathname: '/hotels',
+              pathname: '/transport-details',
               params: { 
-                transportId: item._id,
+                id: item._id,
                 ...(hotelId ? { hotelId } : {}),
                 ...(tourPackId ? { tourPackId } : {}),
+                ...(persons ? { persons } : {}),
               },
             });
           }}
         >
-          <Text style={styles.actionButtonText}>Next</Text>
-          <Ionicons name="arrow-forward" size={18} color="#FFF" />
+          <Text style={styles.actionButtonText}>
+            {parsedPersons > item.capacity ? 'Unavailable' : 'Next'}
+          </Text>
+          <Ionicons name={parsedPersons > item.capacity ? 'lock-closed' : 'arrow-forward'} size={18} color="#FFF" />
         </TouchableOpacity>
       </View>
     </View>
@@ -412,5 +435,26 @@ const styles = StyleSheet.create({
     color: '#003580',
     fontWeight: '700',
     fontSize: 14,
+  },
+  capacityWarning: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#FFEBEE',
+    padding: 10,
+    borderRadius: 12,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#FFCDD2',
+  },
+  capacityWarningText: {
+    fontSize: 12,
+    color: '#D32F2F',
+    fontWeight: '700',
+  },
+  disabledButton: {
+    backgroundColor: '#CBD5E0',
+    shadowOpacity: 0,
+    elevation: 0,
   },
 });

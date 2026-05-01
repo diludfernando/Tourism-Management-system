@@ -48,6 +48,7 @@ export default function EditTransportationScreen() {
     capacity: '',
     price: '',
     description: '',
+    contactNumber: '',
   });
   const isAdminMode = admin === 'true';
 
@@ -73,6 +74,7 @@ export default function EditTransportationScreen() {
           capacity: data.capacity ? data.capacity.toString() : '',
           price: data.price ? data.price.toString() : '',
           description: data.description || '',
+          contactNumber: data.contactNumber || '',
         });
         if (data.vehicleImage) setImage(data.vehicleImage);
       } else {
@@ -282,6 +284,17 @@ export default function EditTransportationScreen() {
                 numberOfLines={4}
                 value={formData.description}
                 onChangeText={(text) => updateField('description', text)}
+              />
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Contact Number</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="e.g. +94 77 123 4567"
+                keyboardType="phone-pad"
+                value={formData.contactNumber}
+                onChangeText={(text) => updateField('contactNumber', text)}
               />
             </View>
 

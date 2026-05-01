@@ -36,6 +36,10 @@ const transportationSchema = mongoose.Schema(
       type: String, // Base64 string or URL
       required: false,
     },
+    contactNumber: {
+      type: String,
+      trim: true,
+    },
   },
   {
     timestamps: true,

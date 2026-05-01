@@ -131,6 +131,12 @@ export default function TransportationListScreen() {
             <Ionicons name="people" size={18} color="#003580" />
             <Text style={styles.statText}>{item.capacity} Seats</Text>
           </View>
+          {item.contactNumber && (
+            <View style={[styles.statItem, { marginLeft: 10 }]}>
+              <Ionicons name="call" size={18} color="#003580" />
+              <Text style={styles.statText}>{item.contactNumber}</Text>
+            </View>
+          )}
         </View>
 
         {item.description && (

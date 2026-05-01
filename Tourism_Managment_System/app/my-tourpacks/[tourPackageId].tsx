@@ -6,6 +6,7 @@ import {
 } from 'react-native';
 import { Image } from 'expo-image';
 import { useRouter, useLocalSearchParams } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import { API_BASE } from '../../src/config';
 
@@ -38,6 +39,7 @@ export default function TourPackDetailScreen() {
   const [selectedGalleryIndex, setSelectedGalleryIndex] = useState(0);
   const [isGalleryViewerVisible, setIsGalleryViewerVisible] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [persons, setPersons] = useState(1);
 
 
 
@@ -137,6 +139,41 @@ export default function TourPackDetailScreen() {
 
         {/* Content */}
         <View style={styles.content}>
+
+          {/* Attendee Selector */}
+          <View style={styles.selectorSection}>
+            <Text style={styles.sectionTitle}>Number of Attendees</Text>
+            <View style={styles.counterRow}>
+              <TouchableOpacity 
+                style={styles.counterBtn} 
+                onPress={() => setPersons(Math.max(1, persons - 1))}
+              >
+                <Ionicons name="remove" size={24} color="#003580" />
+              </TouchableOpacity>
+              
+              <View style={styles.countDisplay}>
+                <Text style={styles.countText}>{persons}</Text>
+                <Text style={styles.countLabel}>{persons === 1 ? 'Person' : 'Persons'}</Text>
+              </View>
+
+              <TouchableOpacity 
+                style={styles.counterBtn} 
+                onPress={() => {
+                  if (persons < tourPack.maxGroupSize) {
+                    setPersons(persons + 1);
+                  } else {
+                    Alert.alert(
+                      'Limit Reached', 
+                      `Maximum group size for this tour is ${tourPack.maxGroupSize} persons.`
+                    );
+                  }
+                }}
+              >
+                <Ionicons name="add" size={24} color="#003580" />
+              </TouchableOpacity>
+            </View>
+            <Text style={styles.limitHint}>Maximum allowed: {tourPack.maxGroupSize} persons</Text>
+          </View>
 
           {/* Gallery */}
           {tourPack.gallery && tourPack.gallery.length > 0 && (
@@ -284,16 +321,25 @@ export default function TourPackDetailScreen() {
       {/* Book Now Button */}
       <View style={styles.bottomBar}>
         <View>
-          <Text style={styles.bottomPriceLabel}>Total Price</Text>
-          <Text style={styles.bottomPrice}>Rs.{tourPack.price} <Text style={styles.perPerson}>/ person</Text></Text>
+          <Text style={styles.bottomPriceLabel}>Total Price ({persons} {persons === 1 ? 'person' : 'persons'})</Text>
+          <Text style={styles.bottomPrice}>Rs.{tourPack.price * persons}</Text>
         </View>
         <TouchableOpacity
           style={styles.bookBtn}
           activeOpacity={0.85}
-          onPress={() => router.push({
-            pathname: '/transport-selection',
-            params: { tourPackId: currentTourPackId }
-          })}
+          onPress={() => {
+            if (persons > tourPack.maxGroupSize) {
+              Alert.alert('Invalid Group Size', `This tour only supports up to ${tourPack.maxGroupSize} persons.`);
+              return;
+            }
+            router.push({
+              pathname: '/transport-selection',
+              params: { 
+                tourPackId: currentTourPackId,
+                persons: persons.toString()
+              }
+            });
+          }}
         >
           <Text style={styles.bookBtnText}>Next</Text>
         </TouchableOpacity>
@@ -687,5 +733,55 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: '800',
+  },
+  selectorSection: {
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    padding: 20,
+    marginBottom: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    elevation: 2,
+  },
+  counterRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 30,
+    marginVertical: 10,
+  },
+  counterBtn: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#EEF2FF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#C7D2FE',
+  },
+  countDisplay: {
+    alignItems: 'center',
+    minWidth: 80,
+  },
+  countText: {
+    fontSize: 28,
+    fontWeight: '800',
+    color: '#003580',
+  },
+  countLabel: {
+    fontSize: 12,
+    color: '#999',
+    fontWeight: '600',
+    textTransform: 'uppercase',
+  },
+  limitHint: {
+    textAlign: 'center',
+    fontSize: 12,
+    color: '#777',
+    marginTop: 10,
+    fontStyle: 'italic',
   },
 });

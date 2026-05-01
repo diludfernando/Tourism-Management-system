@@ -25,10 +25,11 @@ const formatPrice = (value: number) =>
 
 export default function HotelListScreen() {
   const router = useRouter();
-  const { transportId, tourPackId, admin } = useLocalSearchParams<{ 
+  const { transportId, tourPackId, admin, persons } = useLocalSearchParams<{ 
     transportId?: string; 
     tourPackId?: string; 
-    admin?: string 
+    admin?: string;
+    persons?: string;
   }>();
   const [hotels, setHotels] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -161,6 +162,7 @@ export default function HotelListScreen() {
                   ...(isAdminMode ? { admin: 'true' } : {}),
                   ...(transportId ? { transportId } : {}),
                   ...(tourPackId ? { tourPackId } : {}),
+                  ...(persons ? { persons } : {}),
                 },
               })
             }
@@ -207,9 +209,9 @@ export default function HotelListScreen() {
               if (isAdminMode) {
                 router.push({ pathname: '/admin', params: { admin: 'true' } });
               } else if (transportId) {
-                router.push({ pathname: '/transport-selection', params: { tourPackId } });
+                router.push({ pathname: '/transport-selection', params: { tourPackId, persons } });
               } else if (tourPackId) {
-                router.push(`/my-tourpacks/${tourPackId}`);
+                router.push({ pathname: `/my-tourpacks/${tourPackId}`, params: { persons } });
               } else {
                 router.push('/explore');
               }
