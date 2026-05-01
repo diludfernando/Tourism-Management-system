@@ -55,24 +55,21 @@ export default function HotelDetailsScreen() {
   const isSelectionMode = Boolean(transportId) || Boolean(tourPackId);
 
   const handleBack = useCallback(() => {
-    if (isAdminMode) {
-      router.push({ pathname: '/hotels', params: { admin: 'true' } });
-      return;
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      if (isAdminMode) {
+        router.push({ pathname: '/hotels', params: { admin: 'true' } });
+      } else if (isSelectionMode) {
+        router.push({
+          pathname: '/hotels',
+          params: { transportId, tourPackId },
+        });
+      } else {
+        router.push('/explore');
+      }
     }
-
-    if (!transportId) {
-      router.push('/explore');
-      return;
-    }
-
-    router.push({
-      pathname: '/hotels',
-      params: { 
-        transportId,
-        ...(tourPackId ? { tourPackId } : {}),
-      },
-    });
-  }, [isAdminMode, router, transportId, tourPackId]);
+  }, [isAdminMode, isSelectionMode, router, transportId, tourPackId]);
 
   const fetchHotelDetails = useCallback(async () => {
     if (!id) {

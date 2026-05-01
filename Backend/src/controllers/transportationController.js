@@ -52,7 +52,73 @@ const getAllTransportation = async (req, res) => {
   }
 };
 
+// @desc    Get transportation by ID
+// @route   GET /api/transportation/:id
+// @access  Public
+const getTransportationById = async (req, res) => {
+  try {
+    const transportation = await Transportation.findById(req.params.id);
+    if (transportation) {
+      res.json(transportation);
+    } else {
+      res.status(404).json({ message: 'Vehicle not found' });
+    }
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// @desc    Update transportation
+// @route   PUT /api/transportation/:id
+// @access  Admin
+const updateTransportation = async (req, res) => {
+  try {
+    const { vehicleType, brandModel, plateNumber, capacity, price, description, vehicleImage } = req.body;
+
+    const transportation = await Transportation.findById(req.params.id);
+
+    if (transportation) {
+      transportation.vehicleType = vehicleType || transportation.vehicleType;
+      transportation.brandModel = brandModel || transportation.brandModel;
+      transportation.plateNumber = plateNumber || transportation.plateNumber;
+      transportation.capacity = capacity || transportation.capacity;
+      transportation.price = price || transportation.price;
+      transportation.description = description || transportation.description;
+      if (vehicleImage) {
+        transportation.vehicleImage = vehicleImage;
+      }
+
+      const updatedTransportation = await transportation.save();
+      res.json(updatedTransportation);
+    } else {
+      res.status(404).json({ message: 'Vehicle not found' });
+    }
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// @desc    Delete transportation
+// @route   DELETE /api/transportation/:id
+// @access  Admin
+const deleteTransportation = async (req, res) => {
+  try {
+    console.log('\x1b[31m%s\x1b[0m', `🗑️ [DELETE] /api/transportation/${req.params.id} - Request Received`);
+    const deleted = await Transportation.findByIdAndDelete(req.params.id);
+
+    if (deleted) {
+      res.json({ message: 'Vehicle removed successfully' });
+    } else {
+      res.status(404).json({ message: 'Vehicle not found' });
+    }
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
 module.exports = {
   addTransportation,
   getAllTransportation,
+  getTransportationById,
+  updateTransportation,
+  deleteTransportation,
 };

@@ -34,10 +34,11 @@ const VEHICLE_TYPES = [
   'Other'
 ];
 
-export default function AddTransportationScreen() {
+export default function EditTransportationScreen() {
   const router = useRouter();
-  const { admin } = useLocalSearchParams<{ admin?: string }>();
+  const { id, admin } = useLocalSearchParams<{ id?: string; admin?: string }>();
   const [loading, setLoading] = useState(false);
+  const [fetching, setFetching] = useState(true);
   const [showVehicleTypePicker, setShowVehicleTypePicker] = useState(false);
   const [image, setImage] = useState<string | null>(null);
   const [formData, setFormData] = useState({
@@ -53,11 +54,41 @@ export default function AddTransportationScreen() {
   useEffect(() => {
     if (!isAdminMode) {
       router.replace('/');
+      return;
     }
-  }, [isAdminMode, router]);
+    if (id) {
+      fetchVehicleDetails();
+    }
+  }, [id, isAdminMode, router]);
+
+  const fetchVehicleDetails = async () => {
+    try {
+      const response = await fetch(`${API_URL}/${id}`);
+      const data = await response.json();
+      if (response.ok) {
+        setFormData({
+          vehicleType: data.vehicleType || '',
+          brandModel: data.brandModel || '',
+          plateNumber: data.plateNumber || '',
+          capacity: data.capacity ? data.capacity.toString() : '',
+          price: data.price ? data.price.toString() : '',
+          description: data.description || '',
+        });
+        if (data.vehicleImage) setImage(data.vehicleImage);
+      } else {
+        Alert.alert('Error', data.message || 'Failed to fetch details');
+        router.push({ pathname: '/transportation', params: { admin: 'true' } });
+      }
+    } catch (error) {
+      console.error('Fetch Error:', error);
+      Alert.alert('Error', 'Could not connect to the server.');
+      router.push({ pathname: '/transportation', params: { admin: 'true' } });
+    } finally {
+      setFetching(false);
+    }
+  };
 
   const pickImage = async () => {
-    // No permissions request is necessary for launching the image library
     let result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
       allowsEditing: true,
@@ -71,7 +102,7 @@ export default function AddTransportationScreen() {
     }
   };
 
-  const handleSave = async () => {
+  const handleUpdate = async () => {
     const { vehicleType, plateNumber, capacity, price } = formData;
     
     if (!vehicleType || !plateNumber || !capacity || !price) {
@@ -81,8 +112,8 @@ export default function AddTransportationScreen() {
 
     setLoading(true);
     try {
-      const response = await fetch(API_URL, {
-        method: 'POST',
+      const response = await fetch(`${API_URL}/${id}`, {
+        method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
@@ -94,42 +125,27 @@ export default function AddTransportationScreen() {
         }),
       });
 
-      console.log('Frontend Response Status:', response.status);
       const data = await response.json();
-      console.log('Frontend Response Data:', data);
 
       if (response.ok) {
-        console.log('✅ Save successful, preparing to redirect...');
         Alert.alert(
           'Success',
-          'Vehicle information has been saved successfully!',
+          'Vehicle information has been updated successfully!',
           [
             { 
               text: 'OK', 
               onPress: () => {
-                console.log('User clicked OK, redirecting to /admin');
-                router.push({ pathname: '/admin', params: { admin: 'true' } });
+                router.push({ pathname: '/transportation', params: { admin: 'true' } });
               } 
             }
           ]
         );
-        
-        // Fallback for web if Alert button doesn't trigger
-        if (Platform.OS === 'web') {
-          setTimeout(() => {
-            router.push({ pathname: '/admin', params: { admin: 'true' } });
-          }, 1500);
-        }
       } else {
-        console.log('❌ Save failed:', data.message);
-        Alert.alert('Error', data.message || 'Something went wrong while saving.');
+        Alert.alert('Error', data.message || 'Something went wrong while updating.');
       }
     } catch (error) {
-      console.error('Save Error:', error);
-      Alert.alert(
-        'Connection Error',
-        'Could not connect to the server. Please check your network and ensure the backend is running.'
-      );
+      console.error('Update Error:', error);
+      Alert.alert('Connection Error', 'Could not connect to the server.');
     } finally {
       setLoading(false);
     }
@@ -143,14 +159,24 @@ export default function AddTransportationScreen() {
     return null;
   }
 
+  if (fetching) {
+    return (
+      <SafeAreaView style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#003580" />
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.push({ pathname: '/admin', params: { admin: 'true' } })} style={styles.backButton}>
+        <TouchableOpacity onPress={() => router.push({ pathname: '/transportation', params: { admin: 'true' } })} style={styles.backButton}>
           <Ionicons name="arrow-back" size={24} color="#000" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Add Transportation</Text>
-        <View style={{ width: 44 }} />
+        <Text style={styles.headerTitle}>Edit Transportation</Text>
+        <TouchableOpacity onPress={() => router.push('/')} style={styles.backButton}>
+          <Ionicons name="home-outline" size={22} color="#000" />
+        </TouchableOpacity>
       </View>
 
       <KeyboardAvoidingView 
@@ -161,7 +187,7 @@ export default function AddTransportationScreen() {
           <View style={styles.formContainer}>
             
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>Vehicle Image (Optional)</Text>
+              <Text style={styles.label}>Vehicle Image</Text>
               <TouchableOpacity style={styles.imagePicker} onPress={pickImage}>
                 {image ? (
                   <View style={styles.imagePreviewContainer}>
@@ -220,6 +246,7 @@ export default function AddTransportationScreen() {
                 autoCapitalize="characters"
                 value={formData.plateNumber}
                 onChangeText={(text) => updateField('plateNumber', text)}
+                editable={false} // Plate number usually shouldn't change
               />
             </View>
 
@@ -260,13 +287,13 @@ export default function AddTransportationScreen() {
 
             <TouchableOpacity 
               style={[styles.submitButton, loading && { opacity: 0.7 }]} 
-              onPress={handleSave}
+              onPress={handleUpdate}
               disabled={loading}
             >
               {loading ? (
                 <ActivityIndicator color="#FFF" />
               ) : (
-                <Text style={styles.submitButtonText}>Save Vehicle</Text>
+                <Text style={styles.submitButtonText}>Update Vehicle</Text>
               )}
             </TouchableOpacity>
 
@@ -274,7 +301,6 @@ export default function AddTransportationScreen() {
         </ScrollView>
       </KeyboardAvoidingView>
 
-      {/* Vehicle Type Picker Modal */}
       <Modal
         visible={showVehicleTypePicker}
         transparent={true}
@@ -327,6 +353,11 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F8F9FA',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   header: {
     flexDirection: 'row',
@@ -421,7 +452,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
   },
   submitButton: {
-    backgroundColor: '#003580',
+    backgroundColor: '#F57C00',
     borderRadius: 12,
     paddingVertical: 16,
     alignItems: 'center',

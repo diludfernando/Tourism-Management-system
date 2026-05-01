@@ -138,7 +138,7 @@ export default function TransportSelectionScreen() {
             });
           }}
         >
-          <Text style={styles.actionButtonText}>Book Now</Text>
+          <Text style={styles.actionButtonText}>Next</Text>
           <Ionicons name="arrow-forward" size={18} color="#FFF" />
         </TouchableOpacity>
       </View>
@@ -150,7 +150,18 @@ export default function TransportSelectionScreen() {
       <StatusBar style="dark" />
       <SafeAreaView style={{ flex: 1 }}>
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+          <TouchableOpacity 
+            onPress={() => {
+              if (router.canGoBack()) {
+                router.back();
+              } else if (tourPackId) {
+                router.push(`/my-tourpacks/${tourPackId}`);
+              } else {
+                router.push('/explore');
+              }
+            }} 
+            style={styles.backButton}
+          >
             <Ionicons name="chevron-back" size={28} color="#000" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Choose Transport</Text>

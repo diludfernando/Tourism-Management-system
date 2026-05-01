@@ -2,24 +2,22 @@ import React, { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TextInput,
   TouchableOpacity, ActivityIndicator, Alert,
-  Modal, Switch, Platform
+  Modal, Switch, Platform, SafeAreaView
 } from 'react-native';
 import { Image } from 'expo-image';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { adminTourPackDetailRoute } from '../../../src/routes/adminTourpacks';
+import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { API_BASE } from '../../../src/config';
 import { getAuthHeaders } from '../../../src/auth';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { adminTourPackDetailRoute } from '../../../src/routes/adminTourpacks';
 
 export default function AdminEditTourPackScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams();
   const tourPackId = Array.isArray(id) ? id[0] : id;
-
-  console.log('AdminEdit - tourPackId:', tourPackId, 'rawParams id:', id);
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -34,10 +32,8 @@ export default function AdminEditTourPackScreen() {
   });
   const [errors, setErrors] = useState<any>({});
   const [error, setError] = useState('');
-  const [banner, setBanner] = useState<{type: 'success' | 'error', message: string} | null>(null);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [tempDate, setTempDate] = useState(new Date());
-  
 
   useEffect(() => {
     const fetchTourPack = async () => {
@@ -139,7 +135,6 @@ export default function AdminEditTourPackScreen() {
     ]);
   };
 
-  // Add images to gallery
   const addToGallery = async () => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permission.granted) {
@@ -166,31 +161,25 @@ export default function AdminEditTourPackScreen() {
   };
 
   const addDate = () => {
-    const today = new Date();
-    setTempDate(today);
+    setTempDate(new Date());
     setShowDatePicker(true);
   };
 
   const onDateChange = (event: any, selectedDate?: Date) => {
-    const action = event?.type || (event?.nativeEvent && event.nativeEvent.action);
-    if (action === 'dismissed' || action === 0) {
+    if (Platform.OS === 'android') {
       setShowDatePicker(false);
-      return;
-    }
-
-    const currentDate = selectedDate || tempDate;
-    setTempDate(currentDate);
-
-    if (Platform.OS === 'android' && (action === 'set' || action === 1 || selectedDate)) {
-      setShowDatePicker(false);
-      const dateStr = currentDate.toISOString().split('T')[0];
-      if (!form.availabilityDates.includes(dateStr)) {
-        setForm({ ...form, availabilityDates: [...form.availabilityDates, dateStr] });
+      if (selectedDate) {
+        const dateStr = selectedDate.toISOString().split('T')[0];
+        if (!form.availabilityDates.includes(dateStr)) {
+          setForm({ ...form, availabilityDates: [...form.availabilityDates, dateStr] });
+        }
       }
+    } else {
+      if (selectedDate) setTempDate(selectedDate);
     }
   };
 
-  const confirmDate = () => {
+  const confirmDateIOS = () => {
     const dateStr = tempDate.toISOString().split('T')[0];
     if (!form.availabilityDates.includes(dateStr)) {
       setForm({ ...form, availabilityDates: [...form.availabilityDates, dateStr] });
@@ -208,7 +197,6 @@ export default function AdminEditTourPackScreen() {
     if (!form.description.trim()) e.description = 'Description is required';
     if (!form.price || isNaN(Number(form.price))) e.price = 'Enter a valid price';
     if (!form.duration || isNaN(Number(form.duration))) e.duration = 'Enter valid duration';
-    if (form.maxGroupSize && isNaN(Number(form.maxGroupSize))) e.maxGroupSize = 'Enter a valid group size';
     if (!form.destination.trim()) e.destination = 'Destination is required';
     setErrors(e);
     return Object.keys(e).length === 0;
@@ -226,18 +214,15 @@ export default function AdminEditTourPackScreen() {
       formData.append('duration', form.duration);
       formData.append('maxGroupSize', form.maxGroupSize || '10');
       formData.append('destination', form.destination);
+      
       if (form.inclusions) {
-        const incArray = form.inclusions.split(',').map(i => i.trim()).filter(Boolean);
-        incArray.forEach(inc => formData.append('inclusions[]', inc));
+        form.inclusions.split(',').map(i => i.trim()).filter(Boolean).forEach(inc => formData.append('inclusions[]', inc));
       }
-      if (form.availabilityDates.length > 0) {
-        form.availabilityDates.forEach(date => formData.append('availabilityDates[]', date));
-      }
+      form.availabilityDates.forEach(date => formData.append('availabilityDates[]', date));
       if (form.category) formData.append('category', form.category);
       formData.append('difficulty', form.difficulty);
       if (form.tags) {
-        const tagArray = form.tags.split(',').map(t => t.trim()).filter(Boolean);
-        tagArray.forEach(tag => formData.append('tags[]', tag));
+        form.tags.split(',').map(t => t.trim()).filter(Boolean).forEach(tag => formData.append('tags[]', tag));
       }
       formData.append('featured', form.featured ? 'true' : 'false');
 
@@ -254,96 +239,32 @@ export default function AdminEditTourPackScreen() {
         const filename = selectedImage.uri.split('/').pop();
         const match = /\.(\w+)$/.exec(filename ?? '');
         const type = match ? `image/${match[1]}` : 'image/jpeg';
-        formData.append('image', {
-          uri: selectedImage.uri,
-          name: filename,
-          type,
-        } as any);
+        formData.append('image', { uri: selectedImage.uri, name: filename, type } as any);
       }
 
-      // Attach gallery images if selected (only new local files)
-      if (gallery && gallery.length > 0) {
-        let galleryAdded = false;
-        for (let i = 0; i < gallery.length; i++) {
-          const img = gallery[i];
-          try {
-            if (img.existing) continue;
-            const filename = img.uri?.split('/').pop() || `img-${i}.jpg`;
-            // Only add if it looks like an image
-            if (filename.match(/\.(jpg|jpeg|png|gif|webp)$/i)) {
-              formData.append('gallery', {
-                uri: img.uri,
-                name: filename,
-                type: 'image/jpeg',
-              } as any);
-              galleryAdded = true;
-            }
-          } catch (e) {
-            // Skip bad files
-          }
-        }
-        console.log('Gallery files added:', galleryAdded);
-      }
+      gallery.filter(img => !img.existing).forEach((img, i) => {
+        const filename = img.uri?.split('/').pop() || `img-${i}.jpg`;
+        formData.append('gallery', { uri: img.uri, name: filename, type: 'image/jpeg' } as any);
+      });
 
       const authHeaders = await getAuthHeaders();
-      console.log('AdminEdit - authHeaders:', authHeaders);
-        if (!authHeaders.Authorization) {
-          console.warn('AdminEdit - no auth header available');
-          // Don't auto-redirect to login to avoid losing unsaved changes.
-          setBanner({ type: 'error', message: 'Session expired or not signed in. Please sign in to save changes.' });
-          // Offer the user to navigate to login explicitly
-          Alert.alert('Not signed in', 'Please sign in as admin to save changes.', [
-            { text: 'Cancel', style: 'cancel' },
-            { text: 'Sign In', onPress: () => router.push('/login') },
-          ]);
-          setSaving(false);
-          return;
-        }
-
-      console.log('AdminEdit - sending PUT to', `${API_BASE}/api/tourpacks/${tourPackId}`);
       const response = await fetch(`${API_BASE}/api/tourpacks/${tourPackId}`, {
         method: 'PUT',
         headers: authHeaders,
         body: formData,
       });
       
-      // Get response text first to debug
-      const responseText = await response.text();
-      console.log('Response status:', response.status);
-      console.log('Response text:', responseText);
-      
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${responseText}`);
-      }
-      
-      let data;
-      try {
-        data = JSON.parse(responseText);
-      } catch {
-        throw new Error(`Invalid JSON response: ${responseText.substring(0, 100)}`);
-      }
-
+      const data = await response.json();
       if (data.success) {
-        setBanner({ type: 'success', message: 'Tour package updated successfully.' });
-        setTimeout(() => {
-          router.replace(adminTourPackDetailRoute(tourPackId));
-        }, 1500);
+        Alert.alert('Success', 'Tour package updated successfully.');
+        router.replace(adminTourPackDetailRoute(tourPackId));
       } else {
-        setBanner({ type: 'error', message: data.message || 'Could not save package.' });
+        Alert.alert('Error', data.message || 'Could not save package.');
       }
     } catch (error: any) {
-      console.error('Save error:', error);
-      setBanner({ type: 'error', message: `Error: ${error?.message || 'Unknown error'}` });
+      Alert.alert('Error', error?.message || 'An unexpected error occurred.');
     } finally {
       setSaving(false);
-    }
-  };
-
-  const handleCancel = () => {
-    if (tourPackId) {
-      router.replace(adminTourPackDetailRoute(tourPackId));
-    } else {
-      router.back();
     }
   };
 
@@ -354,7 +275,7 @@ export default function AdminEditTourPackScreen() {
 
   if (loading) {
     return (
-      <View style={styles.centered}>
+      <View style={styles.centerContainer}>
         <ActivityIndicator size="large" color="#003580" />
       </View>
     );
@@ -362,531 +283,469 @@ export default function AdminEditTourPackScreen() {
 
   if (error) {
     return (
-      <View style={styles.centered}>
+      <View style={styles.centerContainer}>
         <Text style={styles.errorText}>{error}</Text>
-        <TouchableOpacity style={styles.backBtnAlt} onPress={() => router.back()}>
-          <Text style={styles.backBtnAltText}>Go Back</Text>
+        <TouchableOpacity style={styles.retryButton} onPress={() => router.back()}>
+          <Text style={styles.retryButtonText}>Go Back</Text>
         </TouchableOpacity>
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
-      <StatusBar style="light" />
-      {banner && (
-        <View style={[styles.banner, banner.type === 'success' ? styles.successBanner : styles.errorBanner]}>
-          <Text style={styles.bannerText}>{banner.message}</Text>
-          <TouchableOpacity onPress={() => setBanner(null)} style={styles.bannerClose}>
-            <Text style={styles.bannerCloseText}>×</Text>
-          </TouchableOpacity>
-        </View>
-      )}
-      <View style={styles.heroHeader}>
-        <Image
-          source={require('@/assets/images/travel-hero.png')}
-          style={styles.headerBg}
-          contentFit="cover"
-        />
-        <View style={styles.headerOverlay} />
-        <SafeAreaView>
-          <View style={styles.headerContent}>
-            <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-              <Text style={styles.backText}>← Back</Text>
-            </TouchableOpacity>
-            <View style={styles.adminPill}>
-              <Text style={styles.adminPillText}>ADMIN EDIT</Text>
-            </View>
-            <Text style={styles.headerSub}>LUXE TRAVEL</Text>
-            <Text style={styles.headerTitle}>Edit Package</Text>
-            <Text style={styles.headerDesc}>Update your Sri Lanka tour package details</Text>
-          </View>
-        </SafeAreaView>
+    <SafeAreaView style={styles.container}>
+      <StatusBar style="dark" />
+      
+      {/* Header */}
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.headerBtn}>
+          <Ionicons name="arrow-back" size={24} color="#000" />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Edit Package</Text>
+        <View style={{ width: 44 }} />
       </View>
-      <ScrollView style={styles.formScroll} showsVerticalScrollIndicator={false}>
-        <View style={styles.formCard}>
-          <TouchableOpacity style={styles.imagePicker} onPress={showImageOptions} activeOpacity={0.85}>
-            {selectedImage || currentImageUri ? (
-              <>
-                <Image
-                  source={selectedImage ? { uri: selectedImage.uri } : { uri: currentImageUri }}
-                  style={styles.imagePreview}
-                  contentFit="cover"
-                />
-                <View style={styles.imageEditBadge}>
-                  <Text style={styles.imageEditText}>Change Image</Text>
-                </View>
-              </>
-            ) : (
-              <View style={styles.imagePlaceholder}>
-                <Text style={styles.imagePlaceholderIcon}>📷</Text>
-                <Text style={styles.imagePlaceholderText}>Tap to add photo</Text>
-                <Text style={styles.imagePlaceholderHint}>Camera or Gallery</Text>
+
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+        
+        {/* Main Image Selection */}
+        <Text style={styles.sectionTitle}>Cover Image</Text>
+        <TouchableOpacity style={styles.imagePickerCard} onPress={showImageOptions}>
+          {selectedImage || currentImageUri ? (
+            <>
+              <Image
+                source={selectedImage ? { uri: selectedImage.uri } : { uri: currentImageUri }}
+                style={styles.imagePreview}
+                contentFit="cover"
+              />
+              <View style={styles.editImageOverlay}>
+                <Ionicons name="camera" size={24} color="#FFF" />
+                <Text style={styles.editImageText}>Change Cover</Text>
               </View>
-            )}
+            </>
+          ) : (
+            <View style={styles.imagePlaceholder}>
+              <Ionicons name="camera-outline" size={48} color="#A0AEC0" />
+              <Text style={styles.placeholderText}>Select Package Cover</Text>
+            </View>
+          )}
+        </TouchableOpacity>
+
+        {/* Gallery Selection */}
+        <Text style={styles.sectionTitle}>Gallery Images</Text>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.galleryScroll}>
+          <TouchableOpacity style={styles.addGalleryBtn} onPress={addToGallery}>
+            <Ionicons name="add" size={32} color="#003580" />
+            <Text style={styles.addGalleryText}>Add</Text>
           </TouchableOpacity>
+          {gallery.map((img) => (
+            <View key={img.id} style={styles.galleryThumbWrap}>
+              <Image source={{ uri: img.uri }} style={styles.galleryThumb} contentFit="cover" />
+              <TouchableOpacity style={styles.removeGalleryBtn} onPress={() => removeFromGallery(img.id)}>
+                <Ionicons name="close-circle" size={24} color="#E53935" />
+              </TouchableOpacity>
+            </View>
+          ))}
+        </ScrollView>
 
-          {/* Gallery Section */}
-          <View style={styles.field}>
-            <Text style={styles.label}>📸 Gallery Images</Text>
-            <TouchableOpacity style={styles.galleryAddBtn} onPress={addToGallery} activeOpacity={0.8}>
-              <Text style={styles.galleryAddBtnText}>+ Add Gallery Images</Text>
-            </TouchableOpacity>
-            {gallery.length > 0 && (
-              <View>
-                <Text style={styles.galleryCount}>{gallery.length} image(s) added</Text>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.galleryList}>
-                  {gallery.map((img, idx) => (
-                    <View key={img.id} style={styles.galleryThumb}>
-                      <Image source={{ uri: img.uri }} style={styles.galleryThumbImg} contentFit="cover" />
-                      <TouchableOpacity
-                        style={styles.galleryRemoveBtn}
-                        onPress={() => removeFromGallery(img.id)}
-                      >
-                        <Text style={styles.galleryRemoveBtnText}>✕</Text>
-                      </TouchableOpacity>
-                    </View>
-                  ))}
-                </ScrollView>
-              </View>
-            )}
-          </View>
+        {/* Form Fields */}
+        <View style={styles.formContainer}>
+          <Text style={styles.label}>Package Name *</Text>
+          <TextInput
+            style={[styles.input, errors.name && styles.inputError]}
+            placeholder="Sigiriya Cultural Tour"
+            value={form.name}
+            onChangeText={value => update('name', value)}
+          />
 
-          <View style={styles.field}>
-            <Text style={styles.label}>Package Name <Text style={styles.required}>*</Text></Text>
-            <TextInput
-              style={[styles.input, errors.name && styles.inputError]}
-              placeholder="e.g. Sigiriya Cultural Experience"
-              placeholderTextColor="#BBB"
-              value={form.name}
-              onChangeText={value => update('name', value)}
-            />
-            {errors.name && <Text style={styles.errText}>{errors.name}</Text>}
-          </View>
-          <View style={styles.field}>
-            <Text style={styles.label}>Destination <Text style={styles.required}>*</Text></Text>
-            <TextInput
-              style={[styles.input, errors.destination && styles.inputError]}
-              placeholder="e.g. Sigiriya, Sri Lanka"
-              placeholderTextColor="#BBB"
-              value={form.destination}
-              onChangeText={value => update('destination', value)}
-            />
-            {errors.destination && <Text style={styles.errText}>{errors.destination}</Text>}
-          </View>
-          <View style={styles.field}>
-            <Text style={styles.label}>Description <Text style={styles.required}>*</Text></Text>
-            <TextInput
-              style={[styles.input, styles.textArea, errors.description && styles.inputError]}
-              placeholder="Describe this Sri Lanka experience..."
-              placeholderTextColor="#BBB"
-              value={form.description}
-              onChangeText={value => update('description', value)}
-              multiline numberOfLines={4}
-            />
-            {errors.description && <Text style={styles.errText}>{errors.description}</Text>}
-          </View>
+          <Text style={styles.label}>Destination *</Text>
+          <TextInput
+            style={[styles.input, errors.destination && styles.inputError]}
+            placeholder="Sigiriya, Sri Lanka"
+            value={form.destination}
+            onChangeText={value => update('destination', value)}
+          />
+
+          <Text style={styles.label}>Description *</Text>
+          <TextInput
+            style={[styles.input, styles.textArea, errors.description && styles.inputError]}
+            placeholder="Full package details..."
+            value={form.description}
+            onChangeText={value => update('description', value)}
+            multiline
+            numberOfLines={4}
+          />
+
           <View style={styles.row}>
-            <View style={[styles.field, { flex: 1, marginRight: 10 }]}> 
-              <Text style={styles.label}>Price (LKR) <Text style={styles.required}>*</Text></Text>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.label}>Price (LKR) *</Text>
               <TextInput
                 style={[styles.input, errors.price && styles.inputError]}
-                placeholder="e.g. 15000"
-                placeholderTextColor="#BBB"
+                placeholder="25000"
                 value={form.price}
                 onChangeText={value => update('price', value)}
                 keyboardType="numeric"
               />
-              {errors.price && <Text style={styles.errText}>{errors.price}</Text>}
             </View>
-            <View style={[styles.field, { flex: 1 }]}> 
-              <Text style={styles.label}>Duration (Days) <Text style={styles.required}>*</Text></Text>
+            <View style={{ width: 20 }} />
+            <View style={{ flex: 1 }}>
+              <Text style={styles.label}>Duration (Days) *</Text>
               <TextInput
                 style={[styles.input, errors.duration && styles.inputError]}
-                placeholder="e.g. 5"
-                placeholderTextColor="#BBB"
+                placeholder="3"
                 value={form.duration}
                 onChangeText={value => update('duration', value)}
                 keyboardType="numeric"
               />
-              {errors.duration && <Text style={styles.errText}>{errors.duration}</Text>}
             </View>
           </View>
-          {/* Max Group Size */}
-          <View style={styles.field}>
-            <Text style={styles.label}>Max Group Size</Text>
-            <TextInput
-              style={[styles.input, errors.maxGroupSize && styles.inputError]}
-              placeholder="e.g. 10"
-              placeholderTextColor="#BBB"
-              value={form.maxGroupSize}
-              onChangeText={value => update('maxGroupSize', value)}
-              keyboardType="numeric"
-            />
-            {errors.maxGroupSize && <Text style={styles.errText}>{errors.maxGroupSize}</Text>}
-          </View>
-          <View style={styles.field}>
-            <Text style={styles.label}>Inclusions</Text>
-            <Text style={styles.hint}>Separate each item with a comma</Text>
-            <TextInput
-              style={[styles.input, styles.textArea]}
-              placeholder="e.g. Hotel stay, Breakfast, Transport, Guide"
-              placeholderTextColor="#BBB"
-              value={form.inclusions}
-              onChangeText={value => update('inclusions', value)}
-              multiline numberOfLines={3}
-            />
-          </View>
-          <View style={styles.field}>
-            <Text style={styles.label}>Availability Dates</Text>
-            <Text style={styles.hint}>Tap dates to remove. On iOS, choose a date then press Add Date.</Text>
-            <View style={styles.datesContainer}>
-              {form.availabilityDates.map((date, index) => (
-                <TouchableOpacity key={index} style={styles.dateChip} onPress={() => removeDate(date)}>
-                  <Text style={styles.dateChipText}>{new Date(date).toLocaleDateString()}</Text>
-                  <Text style={styles.dateChipRemove}>×</Text>
-                </TouchableOpacity>
-              ))}
-              <TouchableOpacity style={styles.addDateBtn} onPress={addDate}>
-                <Text style={styles.addDateText}>+ Add Date</Text>
+
+          <Text style={styles.label}>Max Group Size</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="10"
+            value={form.maxGroupSize}
+            onChangeText={value => update('maxGroupSize', value)}
+            keyboardType="numeric"
+          />
+
+          <Text style={styles.label}>Inclusions (comma separated)</Text>
+          <TextInput
+            style={[styles.input, styles.textArea]}
+            placeholder="Hotel, Breakfast, Guide..."
+            value={form.inclusions}
+            onChangeText={value => update('inclusions', value)}
+            multiline
+          />
+
+          <Text style={styles.label}>Availability Dates</Text>
+          <View style={styles.datesGrid}>
+            {form.availabilityDates.map((date, idx) => (
+              <TouchableOpacity key={idx} style={styles.dateChip} onPress={() => removeDate(date)}>
+                <Text style={styles.dateChipText}>{date}</Text>
+                <Ionicons name="close-circle" size={16} color="#FFF" />
               </TouchableOpacity>
-            </View>
-          </View>
-          <View style={styles.field}>
-            <Text style={styles.label}>Category</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="e.g. Adventure, Cultural"
-              placeholderTextColor="#BBB"
-              value={form.category}
-              onChangeText={value => update('category', value)}
-            />
-          </View>
-          <View style={styles.field}>
-            <Text style={styles.label}>Difficulty</Text>
-            <View style={styles.difficultyRow}>
-              {['easy', 'moderate', 'hard'].map((level) => (
-                <TouchableOpacity
-                  key={level}
-                  style={[
-                    styles.difficultyChip,
-                    form.difficulty === level && styles.difficultyChipActive,
-                  ]}
-                  onPress={() => setForm({ ...form, difficulty: level })}
-                  activeOpacity={0.85}
-                >
-                  <Text
-                    style={[
-                      styles.difficultyChipText,
-                      form.difficulty === level && styles.difficultyChipTextActive,
-                    ]}
-                  >
-                    {level.charAt(0).toUpperCase() + level.slice(1)}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
-          <View style={styles.field}>
-            <Text style={styles.label}>Tags</Text>
-            <Text style={styles.hint}>Separate each tag with a comma</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="e.g. Beach, Hiking, Family"
-              placeholderTextColor="#BBB"
-              value={form.tags}
-              onChangeText={value => update('tags', value)}
-            />
-          </View>
-          <View style={styles.field}>
-            <View style={styles.switchRow}>
-              <Text style={styles.label}>Featured Package</Text>
-              <Switch
-                value={form.featured}
-                onValueChange={value => setForm({ ...form, featured: value })}
-                trackColor={{ false: '#767577', true: '#003580' }}
-                thumbColor={form.featured ? '#fff' : '#f4f3f4'}
-              />
-            </View>
-          </View>
-          <View style={styles.buttonRow}>
-            <TouchableOpacity
-              style={styles.cancelBtn}
-              onPress={handleCancel}
-              activeOpacity={0.85}
-            >
-              <Text style={styles.cancelBtnText}>Cancel</Text>
+            ))}
+            <TouchableOpacity style={styles.addDateBtn} onPress={addDate}>
+              <Ionicons name="calendar-outline" size={18} color="#003580" />
+              <Text style={styles.addDateBtnText}>Add Date</Text>
             </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.submitBtn, saving && { opacity: 0.7 }]}
+          </View>
+
+          <View style={styles.featuredRow}>
+            <Text style={styles.label}>Mark as Featured</Text>
+            <Switch
+              value={form.featured}
+              onValueChange={val => setForm({ ...form, featured: val })}
+              trackColor={{ false: '#CBD5E0', true: '#003580' }}
+            />
+          </View>
+
+          {/* Action Buttons */}
+          <View style={styles.actionRow}>
+            <TouchableOpacity style={styles.cancelButton} onPress={() => router.back()}>
+              <Text style={styles.cancelButtonText}>Cancel</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={[styles.saveButton, saving && { opacity: 0.7 }]} 
               onPress={handleSave}
               disabled={saving}
-              activeOpacity={0.85}
             >
-              {saving
-                ? <ActivityIndicator color="#fff" />
-                : <Text style={styles.submitText}>Save Changes</Text>
-              }
+              {saving ? <ActivityIndicator color="#FFF" /> : <Text style={styles.saveButtonText}>Save Changes</Text>}
             </TouchableOpacity>
           </View>
-          <View style={{ height: 40 }} />
         </View>
-      </ScrollView>
-      {Platform.OS === 'android' && showDatePicker ? (
-        <DateTimePicker
-          value={tempDate}
-          mode="date"
-          display="default"
-          onChange={onDateChange}
-          minimumDate={new Date()}
-        />
-      ) : null}
 
-      {Platform.OS === 'ios' && (
-        <Modal visible={showDatePicker} transparent animationType="slide">
-          <View style={styles.modalContainer}>
-            <View style={styles.modalContent}>
-              <Text style={styles.modalTitle}>Select Date</Text>
-              <DateTimePicker
-                value={tempDate}
-                mode="date"
-                display="spinner"
-                onChange={(event, date) => {
-                  const action = event?.type || (event as any)?.nativeEvent?.action;
-                  if (action === 'dismissed') {
-                    setShowDatePicker(false);
-                    return;
-                  }
-                  if (date) setTempDate(date);
-                }}
-                minimumDate={new Date()}
-              />
-              <View style={styles.modalButtonsRow}>
-                <TouchableOpacity style={styles.modalCancelBtn} onPress={() => setShowDatePicker(false)}>
-                  <Text style={styles.modalCancelText}>Cancel</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.modalConfirmBtn} onPress={confirmDate}>
-                  <Text style={styles.modalConfirmText}>Add Date</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          </View>
-        </Modal>
+        <View style={{ height: 40 }} />
+      </ScrollView>
+
+      {/* Date Picker Modal */}
+      {showDatePicker && Platform.OS === 'android' && (
+        <DateTimePicker value={tempDate} mode="date" display="default" onChange={onDateChange} minimumDate={new Date()} />
       )}
-    </View>
+      <Modal visible={showDatePicker && Platform.OS === 'ios'} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <View style={styles.iosDatePickerCard}>
+            <View style={styles.iosDatePickerHeader}>
+              <TouchableOpacity onPress={() => setShowDatePicker(false)}><Text style={styles.iosCancelText}>Cancel</Text></TouchableOpacity>
+              <TouchableOpacity onPress={confirmDateIOS}><Text style={styles.iosDoneText}>Done</Text></TouchableOpacity>
+            </View>
+            <DateTimePicker value={tempDate} mode="date" display="spinner" onChange={onDateChange} minimumDate={new Date()} />
+          </View>
+        </View>
+      </Modal>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#EEF2F8' },
-  banner: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    zIndex: 999,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  container: {
+    flex: 1,
+    backgroundColor: '#F3F5F7',
+  },
+  centerContainer: {
+    flex: 1,
+    justifyContent: 'center',
     alignItems: 'center',
-    paddingTop: Platform.OS === 'ios' ? 54 : 42,
-    paddingHorizontal: 20,
-    paddingBottom: 12,
-    backgroundColor: '#4CAF50',
+    backgroundColor: '#F3F5F7',
   },
-  successBanner: { backgroundColor: '#4CAF50' },
-  errorBanner: { backgroundColor: '#F44336' },
-  bannerText: { color: '#fff', fontSize: 14, fontWeight: '600', flex: 1 },
-  bannerClose: { padding: 4 },
-  bannerCloseText: { color: '#fff', fontSize: 18, fontWeight: 'bold' },
-  heroHeader: { height: 250, position: 'relative' },
-  headerBg: { ...StyleSheet.absoluteFillObject as any },
-  headerOverlay: {
-    ...StyleSheet.absoluteFillObject as any,
-    backgroundColor: 'rgba(2, 12, 37, 0.82)',
-  },
-  headerContent: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 18 },
-  backBtn: {
-    alignSelf: 'flex-start',
-    backgroundColor: 'rgba(255,255,255,0.15)',
-    paddingHorizontal: 10, paddingVertical: 4,
-    borderRadius: 20, marginBottom: 14,
-    borderWidth: 1, borderColor: 'rgba(255,255,255,0.25)',
-  },
-  backText: { color: '#fff', fontSize: 12, fontWeight: '500' },
-  adminPill: {
-    alignSelf: 'flex-start',
-    backgroundColor: '#FFD700',
-    paddingHorizontal: 12,
-    paddingVertical: 5,
-    borderRadius: 999,
-    marginBottom: 8,
-  },
-  adminPillText: { color: '#0B1E44', fontSize: 11, fontWeight: '800', letterSpacing: 1.1 },
-  headerSub: { color: 'rgba(255,255,255,0.74)', fontSize: 11, letterSpacing: 3, marginBottom: 4 },
-  headerTitle: { color: '#fff', fontSize: 31, fontWeight: '900' },
-  headerDesc: { color: 'rgba(255,255,255,0.78)', fontSize: 13, marginTop: 4 },
-  formScroll: { flex: 1 },
-  formCard: {
-    margin: 16, backgroundColor: '#fff',
-    borderRadius: 24, padding: 20,
-    borderWidth: 1,
-    borderColor: '#DCE4F3',
-    shadowColor: '#000', shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08, shadowRadius: 12, elevation: 4,
-  },
-  imagePicker: {
-    height: 180, borderRadius: 16,
-    overflow: 'hidden', marginBottom: 20,
-    backgroundColor: '#F0F4FF',
-    borderWidth: 2, borderColor: '#D0D8F0',
-    borderStyle: 'dashed',
-  },
-  imagePreview: { width: '100%', height: '100%' },
-  imageEditBadge: {
-    position: 'absolute', bottom: 10, right: 10,
-    backgroundColor: '#003580',
-    paddingHorizontal: 12, paddingVertical: 6,
-    borderRadius: 20,
-  },
-  imageEditText: { color: '#fff', fontSize: 12, fontWeight: '600' },
-  imagePlaceholder: {
-    flex: 1, justifyContent: 'center', alignItems: 'center',
-  },
-  imagePlaceholderIcon: { fontSize: 36, marginBottom: 8 },
-  imagePlaceholderText: { fontSize: 15, fontWeight: '600', color: '#003580' },
-  imagePlaceholderHint: { fontSize: 12, color: '#999', marginTop: 4 },
-  row: { flexDirection: 'row' },
-  field: { marginBottom: 18 },
-  label: { fontSize: 13, fontWeight: '700', color: '#1A1A2E', marginBottom: 7 },
-  required: { color: '#E53935' },
-  hint: { fontSize: 11, color: '#999', marginBottom: 6 },
-  input: {
-    backgroundColor: '#F8F9FF', borderRadius: 12,
-    padding: 14, fontSize: 14, color: '#1A1A2E',
-    borderWidth: 1.5, borderColor: '#E8ECF4',
-  },
-  textArea: { height: 100, textAlignVertical: 'top' },
-  inputError: { borderColor: '#E53935' },
-  errText: { color: '#E53935', fontSize: 11, marginTop: 4 },
-  buttonRow: {
-    flexDirection: 'row', gap: 12, marginTop: 8,
-  },
-  cancelBtn: {
-    flex: 1, backgroundColor: '#E0E0E0', borderRadius: 30,
-    height: 58, justifyContent: 'center', alignItems: 'center',
-  },
-  cancelBtnText: {
-    color: '#1A1A2E', fontSize: 16, fontWeight: '700',
-  },
-  submitBtn: {
-    flex: 1, backgroundColor: '#0B1E44', borderRadius: 30,
-    height: 58, justifyContent: 'center', alignItems: 'center',
-    shadowColor: '#0B1E44', shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.35, shadowRadius: 12, elevation: 8,
-  },
-  submitText: { color: '#fff', fontSize: 16, fontWeight: '800', letterSpacing: 0.5 },
-  centered: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 },
-  errorText: { color: '#E53935', fontSize: 15, marginBottom: 16 },
-  backBtnAlt: {
-    backgroundColor: '#003580', paddingHorizontal: 24,
-    paddingVertical: 10, borderRadius: 20,
-  },
-  backBtnAltText: { color: '#fff', fontWeight: '600' },
-  datesContainer: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  dateChip: {
-    backgroundColor: '#003580', borderRadius: 20,
-    paddingHorizontal: 12, paddingVertical: 6,
-    flexDirection: 'row', alignItems: 'center',
-  },
-  dateChipText: { color: '#fff', fontSize: 12, fontWeight: '600' },
-  dateChipRemove: { color: '#fff', fontSize: 16, marginLeft: 8 },
-  addDateBtn: {
-    backgroundColor: '#E0E0E0', borderRadius: 20,
-    paddingHorizontal: 12, paddingVertical: 6,
-  },
-  addDateText: { color: '#003580', fontSize: 12, fontWeight: '600' },
-  difficultyRow: {
+  header: {
     flexDirection: 'row',
-    gap: 8,
-    flexWrap: 'wrap',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingVertical: 15,
+    backgroundColor: '#F3F5F7',
   },
-  difficultyChip: {
+  headerBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#FFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 5,
+    elevation: 2,
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#1a1a1a',
+  },
+  scrollContent: {
+    padding: 20,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#4A5568',
+    marginBottom: 15,
+    marginLeft: 5,
+  },
+  imagePickerCard: {
+    height: 180,
+    borderRadius: 20,
+    overflow: 'hidden',
+    backgroundColor: '#FFF',
+    borderWidth: 2,
+    borderColor: '#E2E8F0',
+    borderStyle: 'dashed',
+    marginBottom: 25,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  imagePreview: {
+    width: '100%',
+    height: '100%',
+  },
+  editImageOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.3)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 5,
+  },
+  editImageText: {
+    color: '#FFF',
+    fontWeight: '700',
+    fontSize: 14,
+  },
+  imagePlaceholder: {
+    alignItems: 'center',
+    gap: 10,
+  },
+  placeholderText: {
+    color: '#A0AEC0',
+    fontWeight: '600',
+  },
+  galleryScroll: {
+    flexDirection: 'row',
+    marginBottom: 25,
+  },
+  addGalleryBtn: {
+    width: 100,
+    height: 80,
+    borderRadius: 15,
+    backgroundColor: '#FFF',
+    borderWidth: 1,
+    borderColor: '#CBD5E0',
+    borderStyle: 'dashed',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  addGalleryText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#003580',
+    marginTop: 2,
+  },
+  galleryThumbWrap: {
+    marginRight: 12,
+    position: 'relative',
+  },
+  galleryThumb: {
+    width: 100,
+    height: 80,
+    borderRadius: 15,
+  },
+  removeGalleryBtn: {
+    position: 'absolute',
+    top: -8,
+    right: -8,
+    backgroundColor: '#FFF',
+    borderRadius: 12,
+  },
+  formContainer: {
+    backgroundColor: '#FFF',
+    borderRadius: 24,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    elevation: 2,
+  },
+  label: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#4A5568',
+    marginBottom: 8,
+    marginLeft: 4,
+  },
+  input: {
+    backgroundColor: '#F8F9FF',
+    borderRadius: 12,
+    padding: 15,
+    fontSize: 16,
+    color: '#1a1a1a',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    marginBottom: 20,
+  },
+  textArea: {
+    height: 100,
+    textAlignVertical: 'top',
+  },
+  inputError: {
+    borderColor: '#E53935',
+  },
+  row: {
+    flexDirection: 'row',
+  },
+  datesGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+    marginBottom: 20,
+  },
+  dateChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#003580',
     paddingHorizontal: 12,
     paddingVertical: 8,
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: '#D6DDF0',
-    backgroundColor: '#F8F9FF',
+    borderRadius: 12,
+    gap: 8,
   },
-  difficultyChipActive: {
-    backgroundColor: '#003580',
-    borderColor: '#003580',
-  },
-  difficultyChipText: {
-    color: '#1A1A2E',
+  dateChipText: {
+    color: '#FFF',
     fontSize: 12,
     fontWeight: '700',
   },
-  difficultyChipTextActive: {
-    color: '#fff',
+  addDateBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F8F9FF',
+    paddingHorizontal: 15,
+    paddingVertical: 8,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#003580',
+    borderStyle: 'dashed',
+    gap: 8,
   },
-  switchRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  modalContainer: {
-    flex: 1, justifyContent: 'center', alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.5)',
+  addDateBtnText: {
+    color: '#003580',
+    fontWeight: '700',
+    fontSize: 12,
   },
-  modalContent: {
-    backgroundColor: '#fff', borderRadius: 20,
-    padding: 20, width: '80%', alignItems: 'center',
-  },
-  modalTitle: { fontSize: 18, fontWeight: '700', marginBottom: 20 },
-  modalButtonsRow: {
+  featuredRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    width: '100%',
-    marginTop: 20,
+    alignItems: 'center',
+    marginBottom: 30,
+    paddingHorizontal: 5,
   },
-  modalCancelBtn: {
+  actionRow: {
+    flexDirection: 'row',
+    gap: 15,
+  },
+  cancelButton: {
     flex: 1,
-    marginRight: 10,
-    backgroundColor: '#E0E0E0',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 18,
+    paddingVertical: 16,
+    borderRadius: 15,
+    backgroundColor: '#F1F5F9',
     alignItems: 'center',
   },
-  modalConfirmBtn: {
-    flex: 1,
-    marginLeft: 10,
+  cancelButtonText: {
+    color: '#64748B',
+    fontWeight: '700',
+    fontSize: 16,
+  },
+  saveButton: {
+    flex: 2,
+    paddingVertical: 16,
+    borderRadius: 15,
     backgroundColor: '#003580',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 18,
     alignItems: 'center',
   },
-  modalCancelText: { color: '#1A1A2E', fontWeight: '700' },
-  modalConfirmText: { color: '#fff', fontWeight: '700' },
-  modalCloseBtn: {
-    marginTop: 20, backgroundColor: '#003580',
-    paddingHorizontal: 20, paddingVertical: 10, borderRadius: 20,
+  saveButtonText: {
+    color: '#FFF',
+    fontWeight: '700',
+    fontSize: 16,
   },
-  modalCloseText: { color: '#fff', fontWeight: '600' },
-  galleryAddBtn: {
-    backgroundColor: '#FFD700', paddingVertical: 12, borderRadius: 10,
-    alignItems: 'center', marginTop: 8, borderWidth: 1, borderColor: '#FFC700',
+  errorText: {
+    color: '#E53935',
+    marginBottom: 20,
+    textAlign: 'center',
   },
-  galleryAddBtnText: { color: '#003580', fontWeight: '700', fontSize: 14 },
-  galleryCount: { color: '#666', fontSize: 12, marginTop: 10, marginBottom: 10 },
-  galleryList: { marginTop: 10, marginBottom: 16 },
-  galleryThumb: {
-    width: 70, height: 70, borderRadius: 8, marginRight: 10,
-    backgroundColor: '#f0f0f0', overflow: 'hidden', position: 'relative',
+  retryButton: {
+    backgroundColor: '#003580',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 12,
   },
-  galleryThumbImg: { width: '100%', height: '100%' },
-  galleryRemoveBtn: {
-    position: 'absolute', top: -5, right: -5, width: 28, height: 28,
-    borderRadius: 14, backgroundColor: '#E53935', justifyContent: 'center',
-    alignItems: 'center', borderWidth: 2, borderColor: '#fff',
+  retryButtonText: {
+    color: '#FFF',
+    fontWeight: '700',
   },
-  galleryRemoveBtnText: { color: '#fff', fontSize: 18, fontWeight: 'bold' },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  iosDatePickerCard: {
+    backgroundColor: '#FFF',
+    paddingBottom: 40,
+    borderTopLeftRadius: 25,
+    borderTopRightRadius: 25,
+  },
+  iosDatePickerHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+  },
+  iosCancelText: {
+    color: '#E53935',
+    fontWeight: '600',
+  },
+  iosDoneText: {
+    color: '#003580',
+    fontWeight: '700',
+  },
 });

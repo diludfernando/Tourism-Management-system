@@ -12,6 +12,8 @@ import {
 } from 'react-native';
 import { useRouter, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { StatusBar } from 'expo-status-bar';
+import { Image } from 'expo-image';
 import { API_BASE } from '../src/config';
 
 const API_URL = `${API_BASE}/api/hotels`;
@@ -101,58 +103,97 @@ export default function HotelListScreen() {
   };
 
   const renderItem = ({ item }: { item: any }) => (
-    <TouchableOpacity 
-      style={styles.card}
-      onPress={() =>
-        router.push({
-          pathname: '/hotel-details',
-          params: {
-            id: item._id,
-            ...(isAdminMode ? { admin: 'true' } : {}),
-            ...(transportId ? { transportId } : {}),
-            ...(tourPackId ? { tourPackId } : {}),
-          },
-        })
-      }
-    >
-      <View style={styles.cardHeader}>
-        <Text style={styles.hotelName}>{item.name}</Text>
-        <Text style={styles.hotelType}>{item.accommodationType}</Text>
-      </View>
-      <Text style={styles.hotelLocation}>
-        <Ionicons name="location-outline" size={14} /> {item.location}
-      </Text>
-      <View style={styles.cardDetails}>
-      <Text style={styles.priceText}>{formatPrice(item.pricePerNight)} / night</Text>
-        <Text style={[styles.statusText, item.isAvailable ? styles.available : styles.unavailable]}>
-          {item.isAvailable ? `Available (${item.availableRooms} rooms)` : 'Sold Out'}
-        </Text>
-      </View>
-      {isAdminMode ? (
-        <View style={styles.cardActions}>
-          <TouchableOpacity 
-            style={[styles.actionButton, styles.editButton]}
-            onPress={(e: any) => {
-              if (e && e.stopPropagation) e.stopPropagation();
-              router.push({ pathname: '/edit-hotel', params: { id: item._id, admin: 'true' } });
-            }}
-          >
-            <Ionicons name="create-outline" size={16} color="#FFF" />
-            <Text style={styles.actionButtonText}>Edit</Text>
-          </TouchableOpacity>
-          <TouchableOpacity 
-            style={[styles.actionButton, styles.deleteButton]}
-            onPress={(e: any) => {
-              if (e && e.stopPropagation) e.stopPropagation();
-              handleDelete(item._id);
-            }}
-          >
-            <Ionicons name="trash-outline" size={16} color="#FFF" />
-            <Text style={styles.actionButtonText}>Delete</Text>
-          </TouchableOpacity>
+    <View style={styles.card}>
+      {/* Hero Image Section */}
+      <View style={styles.cardHero}>
+        {item.image ? (
+          <Image source={{ uri: item.image }} style={styles.heroImage} contentFit="cover" transition={500} />
+        ) : (
+          <View style={styles.heroPlaceholder}>
+            <Ionicons name="business-outline" size={64} color="#003580" />
+          </View>
+        )}
+        <View style={styles.heroOverlay} />
+        
+        {/* Floating Badges */}
+        <View style={styles.typeBadge}>
+          <Text style={styles.typeBadgeText}>{item.accommodationType}</Text>
         </View>
-      ) : null}
-    </TouchableOpacity>
+        
+        <View style={styles.priceFloatingBadge}>
+          <Text style={styles.priceLabel}>Starting from</Text>
+          <Text style={styles.priceAmount}>{formatPrice(item.pricePerNight)}</Text>
+        </View>
+      </View>
+
+      {/* Content Section */}
+      <View style={styles.cardContent}>
+        <View style={styles.mainInfo}>
+          <Text style={styles.hotelNameText}>{item.name}</Text>
+        </View>
+
+        <View style={styles.statsRow}>
+          <View style={styles.statItem}>
+            <Ionicons name="location" size={18} color="#003580" />
+            <Text style={styles.statText}>{item.location}</Text>
+          </View>
+          
+          <View style={styles.statItem}>
+            <Ionicons name="bed" size={18} color="#003580" />
+            <Text style={styles.statText}>{item.availableRooms} Left</Text>
+          </View>
+        </View>
+
+        {item.description && (
+          <Text style={styles.descriptionText} numberOfLines={2}>
+            {item.description}
+          </Text>
+        )}
+
+        <View style={styles.buttonContainer}>
+          <TouchableOpacity 
+            style={styles.actionButton}
+            onPress={() =>
+              router.push({
+                pathname: '/hotel-details',
+                params: {
+                  id: item._id,
+                  ...(isAdminMode ? { admin: 'true' } : {}),
+                  ...(transportId ? { transportId } : {}),
+                  ...(tourPackId ? { tourPackId } : {}),
+                },
+              })
+            }
+          >
+            <Text style={styles.actionButtonText}>{isAdminMode ? 'Manage' : 'Next'}</Text>
+            <Ionicons name="arrow-forward" size={18} color="#FFF" />
+          </TouchableOpacity>
+
+          {isAdminMode && (
+            <View style={styles.adminActions}>
+              <TouchableOpacity 
+                style={[styles.adminButton, styles.editButton]}
+                onPress={(e: any) => {
+                  if (e && e.stopPropagation) e.stopPropagation();
+                  router.push({ pathname: '/edit-hotel', params: { id: item._id, admin: 'true' } });
+                }}
+              >
+                <Ionicons name="create-outline" size={18} color="#FFF" />
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.adminButton, styles.deleteButton]}
+                onPress={(e: any) => {
+                  if (e && e.stopPropagation) e.stopPropagation();
+                  handleDelete(item._id);
+                }}
+              >
+                <Ionicons name="trash-outline" size={18} color="#FFF" />
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
+      </View>
+    </View>
   );
 
   return (
@@ -160,17 +201,19 @@ export default function HotelListScreen() {
       <View style={styles.header}>
         <TouchableOpacity
           onPress={() => {
-            if (isAdminMode) {
-              router.push({ pathname: '/admin', params: { admin: 'true' } });
-              return;
+            if (router.canGoBack()) {
+              router.back();
+            } else {
+              if (isAdminMode) {
+                router.push({ pathname: '/admin', params: { admin: 'true' } });
+              } else if (transportId) {
+                router.push({ pathname: '/transport-selection', params: { tourPackId } });
+              } else if (tourPackId) {
+                router.push(`/my-tourpacks/${tourPackId}`);
+              } else {
+                router.push('/explore');
+              }
             }
-
-            if (isSelectionMode) {
-              router.push('/transport-selection');
-              return;
-            }
-
-            router.push('/explore');
           }}
           style={styles.backButton}
         >
@@ -180,14 +223,9 @@ export default function HotelListScreen() {
           {isAdminMode ? 'Manage Accommodations' : isSelectionMode ? 'Choose Accommodation' : 'Browse Accommodations'}
         </Text>
         {!isAdminMode ? (
-          <TouchableOpacity onPress={() => router.push('/')} style={styles.addButton}>
-            <Ionicons name="home-outline" size={24} color="#003580" />
-          </TouchableOpacity>
+          <View style={{ width: 44 }} /> // Placeholder to keep title centered if needed, or just remove
         ) : (
           <View style={styles.headerActions}>
-            <TouchableOpacity onPress={() => router.push('/')} style={styles.addButton}>
-              <Ionicons name="home-outline" size={24} color="#003580" />
-            </TouchableOpacity>
             <TouchableOpacity onPress={() => router.push({ pathname: '/add-hotel', params: { admin: 'true' } })} style={styles.addButton}>
               <Ionicons name="add" size={28} color="#003580" />
             </TouchableOpacity>
@@ -217,7 +255,8 @@ export default function HotelListScreen() {
           data={hotels}
           keyExtractor={(item) => item._id}
           renderItem={renderItem}
-          contentContainerStyle={styles.listContainer}
+          contentContainerStyle={styles.listContent}
+          showsVerticalScrollIndicator={false}
         />
       )}
     </SafeAreaView>
@@ -227,7 +266,7 @@ export default function HotelListScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8F9FA',
+    backgroundColor: '#F3F5F7', 
   },
   header: {
     flexDirection: 'row',
@@ -235,128 +274,205 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 20,
     paddingVertical: 15,
-    backgroundColor: '#FFF',
-    borderBottomWidth: 1,
-    borderBottomColor: '#EEE',
+    backgroundColor: '#F3F5F7',
   },
   backButton: {
-    padding: 10,
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#333',
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#FFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 5,
+    elevation: 2,
   },
   addButton: {
-    padding: 5,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#FFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 5,
+    elevation: 2,
   },
   headerActions: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 12,
   },
-  addButtonPlaceholder: {
-    width: 38,
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#1a1a1a',
+    letterSpacing: -0.5,
   },
   centerContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  listContent: {
     padding: 20,
-  },
-  emptyText: {
-    fontSize: 18,
-    color: '#666',
-    marginTop: 10,
-    marginBottom: 20,
-  },
-  addFirstButton: {
-    backgroundColor: '#003580',
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 8,
-  },
-  addFirstButtonText: {
-    color: '#FFF',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  listContainer: {
-    padding: 15,
+    paddingBottom: 40,
   },
   card: {
     backgroundColor: '#FFF',
-    borderRadius: 12,
-    padding: 15,
-    marginBottom: 15,
+    borderRadius: 32,
+    marginBottom: 24,
+    overflow: 'hidden',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 5,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.08,
+    shadowRadius: 20,
+    elevation: 5,
   },
-  cardHeader: {
+  cardHero: {
+    width: '100%',
+    height: 220,
+    position: 'relative',
+  },
+  heroImage: {
+    width: '100%',
+    height: '100%',
+  },
+  heroPlaceholder: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#E9EDF2',
+  },
+  heroOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.05)',
+  },
+  typeBadge: {
+    position: 'absolute',
+    top: 16,
+    left: 16,
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+  },
+  typeBadgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#003580',
+    textTransform: 'uppercase',
+    letterSpacing: 1.2,
+  },
+  priceFloatingBadge: {
+    position: 'absolute',
+    bottom: 16,
+    right: 16,
+    backgroundColor: '#003580',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 18,
+    shadowColor: '#003580',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+  },
+  priceLabel: {
+    color: 'rgba(255,255,255,0.7)',
+    fontSize: 9,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  priceAmount: {
+    color: '#FFF',
+    fontSize: 16,
+    fontWeight: '800',
+  },
+  cardContent: {
+    padding: 24,
+  },
+  mainInfo: {
+    marginBottom: 16,
+  },
+  hotelNameText: {
+    fontSize: 24,
+    fontWeight: '800',
+    color: '#1a1a1a',
+    letterSpacing: -0.5,
+  },
+  statsRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 5,
+    marginBottom: 20,
+    backgroundColor: '#F8F9FA',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#EDF2F7',
   },
-  hotelName: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
+  statItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
     flex: 1,
   },
-  hotelType: {
-    fontSize: 12,
-    color: '#003580',
-    backgroundColor: '#E6F0FA',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-    overflow: 'hidden',
-  },
-  hotelLocation: {
+  statText: {
     fontSize: 14,
-    color: '#666',
-    marginBottom: 10,
+    color: '#2D3748',
+    fontWeight: '700',
+    flexShrink: 1,
   },
-  cardDetails: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 15,
-    paddingTop: 10,
-    borderTopWidth: 1,
-    borderTopColor: '#EEE',
-  },
-  priceText: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#333',
-  },
-  statusText: {
+  descriptionText: {
     fontSize: 14,
-    fontWeight: '600',
+    color: '#4A5568',
+    lineHeight: 22,
+    marginBottom: 24,
   },
-  available: {
-    color: '#2E7D32',
-  },
-  unavailable: {
-    color: '#D32F2F',
-  },
-  cardActions: {
+  buttonContainer: {
     flexDirection: 'row',
-    justifyContent: 'flex-end',
-    gap: 10,
+    gap: 12,
   },
   actionButton: {
+    flex: 1,
+    backgroundColor: '#003580',
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 6,
-    gap: 5,
+    justifyContent: 'center',
+    paddingVertical: 16,
+    borderRadius: 20,
+    gap: 10,
+    shadowColor: '#003580',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.25,
+    shadowRadius: 12,
+  },
+  actionButtonText: {
+    color: '#FFF',
+    fontSize: 16,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+  },
+  adminActions: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  adminButton: {
+    width: 52,
+    height: 52,
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
   },
   editButton: {
     backgroundColor: '#F57C00',
@@ -364,9 +480,24 @@ const styles = StyleSheet.create({
   deleteButton: {
     backgroundColor: '#D32F2F',
   },
-  actionButtonText: {
+  emptyText: {
+    fontSize: 16,
+    color: '#A0AEC0',
+    textAlign: 'center',
+    marginTop: 20,
+    fontWeight: '500',
+    maxWidth: '70%',
+  },
+  addFirstButton: {
+    marginTop: 24,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    backgroundColor: '#003580',
+    borderRadius: 16,
+  },
+  addFirstButtonText: {
     color: '#FFF',
+    fontWeight: '700',
     fontSize: 14,
-    fontWeight: '600',
   },
 });

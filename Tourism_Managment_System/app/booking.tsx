@@ -124,10 +124,10 @@ const getCalendarDays = (monthDate: Date) => {
 
 export default function BookingScreen() {
   const router = useRouter();
-  const { hotelId, tourPackId, transportId } = useLocalSearchParams<{ 
-    hotelId?: string; 
-    tourPackId?: string; 
-    transportId?: string 
+  const { hotelId, tourPackId, transportId } = useLocalSearchParams<{
+    hotelId?: string;
+    tourPackId?: string;
+    transportId?: string
   }>();
   const [hotel, setHotel] = useState<Hotel | null>(null);
   const [tourPack, setTourPack] = useState<any | null>(null);
@@ -145,7 +145,7 @@ export default function BookingScreen() {
   const [calendarMonth, setCalendarMonth] = useState(() => startOfDay(new Date()));
   const today = useMemo(() => startOfDay(new Date()), []);
 
-   const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState({
     guestName: '',
     email: '',
     phone: '',
@@ -159,26 +159,29 @@ export default function BookingScreen() {
   });
 
   const handleBack = useCallback(() => {
+    if (router.canGoBack()) {
+      router.back();
+      return;
+    }
+
+    if (hotelId) {
+      router.push({
+        pathname: '/hotel-details',
+        params: {
+          id: hotelId,
+          ...(transportId ? { transportId } : {}),
+          ...(tourPackId ? { tourPackId } : {}),
+        },
+      });
+      return;
+    }
+
     if (tourPackId) {
       router.push(`/my-tourpacks/${tourPackId}`);
       return;
     }
 
-    if (!hotelId) {
-      router.push({
-        pathname: '/hotels',
-        params: transportId ? { transportId } : {},
-      });
-      return;
-    }
-
-    router.push({
-      pathname: '/hotel-details',
-      params: {
-        id: hotelId,
-        ...(transportId ? { transportId } : {}),
-      },
-    });
+    router.push('/explore');
   }, [hotelId, tourPackId, router, transportId]);
 
   const fetchBookingSetup = useCallback(async () => {
@@ -204,9 +207,9 @@ export default function BookingScreen() {
       if (tourPackId) {
         const tourResponse = responses[responseIdx++];
         const tourData = await tourResponse.json();
-        if (tourResponse.ok) {
-          setTourPack(tourData);
-          setFormData((prev) => ({ ...prev, destination: tourData.destination || prev.destination }));
+        if (tourResponse.ok && tourData.success) {
+          setTourPack(tourData.data);
+          setFormData((prev) => ({ ...prev, destination: tourData.data?.destination || prev.destination }));
         }
       }
     } catch {
@@ -251,12 +254,12 @@ export default function BookingScreen() {
     const end = parseDateString(formData.checkOutDate);
     const rawNights = start && end ? Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) : 0;
     const nights = Number.isFinite(rawNights) && rawNights > 0 ? rawNights : 0;
-    
+
     const adults = Math.max(Number(formData.adults) || 0, 0);
     const children = Math.max(Number(formData.children) || 0, 0);
     const guests = adults + children;
     const rooms = hotel ? (adults > 0 ? Math.max(Math.ceil(adults / ROOM_ADULT_CAPACITY), Math.ceil(children / ROOM_CHILD_CAPACITY), 1) : 0) : 0;
-    
+
     const stayAmount = hotel ? nights * rooms * hotel.pricePerNight : 0;
     const packageAmount = tourPack ? tourPack.price * guests : 0;
     const transportAmount = selectedVehicle?.price || 0;
@@ -442,7 +445,7 @@ export default function BookingScreen() {
           transportation: selectedTransport || null,
           itineraryNotes: [
             hotelId
-              ? `Stay at ${hotel.name} for ${bookingPreview.nights} nights`
+              ? `Stay at ${hotel?.name} for ${bookingPreview.nights} nights`
               : `Tour Package: ${tourPack?.name}`,
             selectedVehicle
               ? `Transfer via ${selectedVehicle.brandModel || selectedVehicle.vehicleType}`
@@ -475,7 +478,7 @@ export default function BookingScreen() {
     );
   }
 
-  if (!hotel) {
+  if (!hotel && !tourPack) {
     return null;
   }
 
@@ -497,8 +500,8 @@ export default function BookingScreen() {
             <Text style={styles.heroEyebrow}>Signature Stay</Text>
             <Text style={styles.heroTitle}>{hotel ? hotel.name : tourPack?.name}</Text>
             <Text style={styles.heroMeta}>
-              {hotel 
-                ? `${hotel.location} | ${hotel.accommodationType}` 
+              {hotel
+                ? `${hotel.location} | ${hotel.accommodationType}`
                 : `${tourPack?.destination} | Tour Package`}
             </Text>
             <View style={styles.heroStats}>
@@ -667,33 +670,6 @@ export default function BookingScreen() {
           </View>
 
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Airport or Local Transfer</Text>
-            <TouchableOpacity
-              style={[styles.transportCard, !selectedTransport && styles.transportCardActive]}
-              onPress={() => setSelectedTransport('')}
-            >
-              <Text style={styles.transportTitle}>No transfer needed</Text>
-              <Text style={styles.transportMeta}>Keep the stay-only booking.</Text>
-            </TouchableOpacity>
-            {vehicles.map((vehicle) => {
-              const active = selectedTransport === vehicle._id;
-              return (
-                <TouchableOpacity
-                  key={vehicle._id}
-                  style={[styles.transportCard, active && styles.transportCardActive]}
-                  onPress={() => setSelectedTransport(vehicle._id)}
-                >
-                  <View style={styles.transportHeader}>
-                    <Text style={styles.transportTitle}>{vehicle.brandModel || vehicle.vehicleType}</Text>
-                    <Text style={styles.transportPrice}>{formatPrice(vehicle.price)}</Text>
-                  </View>
-                  <Text style={styles.transportMeta}>{vehicle.vehicleType} | {vehicle.capacity} seats</Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-
-          <View style={styles.section}>
             <Text style={styles.sectionTitle}>Special Requests</Text>
             <TextInput
               style={styles.textArea}
@@ -708,11 +684,11 @@ export default function BookingScreen() {
           <View style={styles.summaryCard}>
             <Text style={styles.sectionTitle}>Booking Summary</Text>
             <Text style={styles.summaryHint}>
-              {hotel && tourPack 
-                ? (bookingPreview.nights > 0 
+              {hotel && tourPack
+                ? (bookingPreview.nights > 0
                   ? `${bookingPreview.adults} adult(s), ${bookingPreview.children} child(ren), ${bookingPreview.rooms} room(s) + ${tourPack.name}`
                   : `Select dates for ${hotel.name} | ${tourPack.name} included`)
-                : hotel 
+                : hotel
                   ? (bookingPreview.nights > 0
                     ? `${bookingPreview.adults} adult(s), ${bookingPreview.children} child(ren), ${bookingPreview.rooms} room(s)`
                     : 'Select check-in and check-out to calculate the total')

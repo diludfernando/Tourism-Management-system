@@ -1,14 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity, ScrollView,
-  ActivityIndicator, RefreshControl, TextInput
+  ActivityIndicator, RefreshControl, TextInput, SafeAreaView, Platform
 } from 'react-native';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import { Ionicons } from '@expo/vector-icons';
 import { adminTourPackDetailRoute, adminTourPacksCreateRoute } from '../../../src/routes/adminTourpacks';
 import { API_BASE } from '../../../src/config';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
 const API_URL = `${API_BASE}/api/tourpacks`;
 
@@ -81,10 +81,6 @@ export default function TourPackList() {
       : null,
   ].filter(Boolean) as { key: string; label: string; onRemove: () => void }[];
 
-  const totalPackages = tourPacks.length;
-  const featuredPackages = tourPacks.filter(pack => pack.featured).length;
-  const destinationCount = new Set(tourPacks.map(pack => pack.destination).filter(Boolean)).size;
-
   const fetchTourPacks = async () => {
     const requestId = ++latestRequestIdRef.current;
     try {
@@ -100,7 +96,6 @@ export default function TourPackList() {
       const response = await fetch(url);
       const data = await response.json();
 
-      // Ignore stale responses from older requests.
       if (requestId !== latestRequestIdRef.current) return;
 
       if (data.success) {
@@ -132,659 +127,507 @@ export default function TourPackList() {
   );
 
   const renderCard = ({ item }: { item: TourPack }) => (
-    <TouchableOpacity
-      style={styles.card}
-      activeOpacity={0.92}
-      onPress={() => router.push(`/admin/my-tourpacks/${encodeURIComponent(item._id)}` as any)}
-    >
-      {/* Background Image */}
-      <Image
-        source={
-          item.image
-            ? { uri: `${API_BASE}${item.image}` }
-            : require('@/assets/images/travel-hero.png')
-        }
-        style={styles.cardBg}
-        contentFit="cover"
-        transition={600}
-      />
-
-      {/* Gradient Overlay */}
-      <View style={styles.cardOverlay} />
-
-      {/* Top Row */}
-      <View style={styles.cardTop}>
-        <View style={styles.durationPill}>
-          <Text style={styles.durationText}>🕐 {item.duration} Days</Text>
-        </View>
-        <View style={styles.groupPill}>
-          <Text style={styles.groupText}>👥 {item.maxGroupSize}</Text>
+    <View style={styles.card}>
+      <View style={styles.cardHero}>
+        <Image
+          source={
+            item.image
+              ? { uri: `${API_BASE}${item.image}` }
+              : require('@/assets/images/travel-hero.png')
+          }
+          style={styles.heroImage}
+          contentFit="cover"
+          transition={500}
+        />
+        <View style={styles.heroOverlay} />
+        
+        {item.featured && (
+          <View style={styles.featuredBadge}>
+            <Ionicons name="star" size={12} color="#003580" />
+            <Text style={styles.featuredText}>Featured</Text>
+          </View>
+        )}
+        
+        <View style={styles.priceFloatingBadge}>
+          <Text style={styles.priceLabel}>From</Text>
+          <Text style={styles.priceAmount}>LKR {item.price.toLocaleString()}</Text>
         </View>
       </View>
 
-      {item.featured && (
-        <View style={styles.featuredBadge}>
-          <Text style={styles.featuredBadgeText}>FEATURED</Text>
+      <View style={styles.cardContent}>
+        <View style={styles.mainInfo}>
+          <Text style={styles.nameText}>{item.name}</Text>
+          <Text style={styles.destinationText}>📍 {item.destination}</Text>
         </View>
-      )}
 
-      {/* Bottom Content */}
-      <View style={styles.cardBottom}>
-        <Text style={styles.cardDestination}>📍 {item.destination}</Text>
-        <Text style={styles.cardName} numberOfLines={2}>{item.name}</Text>
-        <View style={styles.cardFooterRow}>
-          <View>
-            <Text style={styles.fromLabel}>From</Text>
-            <Text style={styles.priceText}>LKR {item.price.toLocaleString()}</Text>
+        <View style={styles.statsRow}>
+          <View style={styles.statItem}>
+            <Ionicons name="time-outline" size={18} color="#003580" />
+            <Text style={styles.statText}>{item.duration} Days</Text>
           </View>
-          <View style={styles.viewBtn}>
-            <Text style={styles.viewBtnText}>View Details →</Text>
+          <View style={styles.statItem}>
+            <Ionicons name="people-outline" size={18} color="#003580" />
+            <Text style={styles.statText}>{item.maxGroupSize} Max</Text>
           </View>
         </View>
+
+        <TouchableOpacity 
+          style={styles.viewButton}
+          onPress={() => router.push(`/admin/my-tourpacks/${encodeURIComponent(item._id)}` as any)}
+        >
+          <Text style={styles.viewButtonText}>View Details</Text>
+          <Ionicons name="arrow-forward" size={18} color="#FFF" />
+        </TouchableOpacity>
       </View>
-    </TouchableOpacity>
+    </View>
   );
 
   return (
-    <View style={styles.container}>
-      <StatusBar style="light" />
-
-      {/* Hero Header */}
-      <View style={styles.heroHeader}>
-        <Image
-          source={require('@/assets/images/travel-hero.png')}
-          style={styles.headerBg}
-          contentFit="cover"
-        />
-        <View style={styles.headerOverlay} />
-        <View style={styles.heroAccentOne} />
-        <View style={styles.heroAccentTwo} />
-        <SafeAreaView>
-          <View style={styles.headerContent}>
-            <View style={styles.headerTopRow}>
-              <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-                <Text style={styles.backText}>← Back</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.addBtn}
-                onPress={() => router.push(adminTourPacksCreateRoute as any)}
-              >
-                <Text style={styles.addBtnText}>+ Add</Text>
-              </TouchableOpacity>
-            </View>
-            <View style={styles.headerTextBlock}>
-              <View style={styles.adminPill}>
-                <Text style={styles.adminPillText}>ADMIN DASHBOARD</Text>
-              </View>
-              <Text style={styles.headerSub}>LUXE TRAVEL CONTROL</Text>
-              <Text style={styles.headerTitle}>Tour Package Manager</Text>
-              <Text style={styles.headerDesc}>Monitor inventory, spotlight featured tours, and manage content fast.</Text>
-            </View>
-          </View>
-        </SafeAreaView>
-      </View>
-
-      <View style={styles.adminSummary}>
-        <View style={styles.summaryHeader}>
-          <Text style={styles.summaryTitle}>Live Overview</Text>
-          <Text style={styles.summaryNote}>{loading ? 'Syncing data...' : 'Updated from API'}</Text>
-        </View>
-        <View style={styles.summaryGrid}>
-          <View style={styles.summaryCard}>
-            <Text style={styles.summaryValue}>{totalPackages}</Text>
-            <Text style={styles.summaryLabel}>Packages</Text>
-          </View>
-          <View style={styles.summaryCard}>
-            <Text style={styles.summaryValue}>{featuredPackages}</Text>
-            <Text style={styles.summaryLabel}>Featured</Text>
-          </View>
-          <View style={styles.summaryCard}>
-            <Text style={styles.summaryValue}>{destinationCount}</Text>
-            <Text style={styles.summaryLabel}>Destinations</Text>
-          </View>
-        </View>
-      </View>
-
-      {/* Search Bar */}
-      <View style={styles.searchContainer}>
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Search packages by name, destination, or category..."
-          placeholderTextColor="#999"
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-        />
-      </View>
-
-      <View style={styles.filtersActionRow}>
+    <SafeAreaView style={styles.container}>
+      <StatusBar style="dark" />
+      
+      {/* Header */}
+      <View style={styles.header}>
         <TouchableOpacity
-          style={styles.filterBtn}
-          onPress={() => setShowFilters(!showFilters)}
-          activeOpacity={0.85}
+          onPress={() => router.push({ pathname: '/admin', params: { admin: 'true' } })}
+          style={styles.headerBtn}
         >
-          <Text style={styles.filterBtnText}>{showFilters ? 'Close Filters' : 'Filters'}</Text>
-          {activeFilters.length > 0 && <Text style={styles.filterBadge}>{activeFilters.length}</Text>}
+          <Ionicons name="arrow-back" size={24} color="#000" />
         </TouchableOpacity>
-
-        {activeFilters.length > 0 && (
-          <TouchableOpacity style={styles.clearFiltersBtn} onPress={clearAllFilters} activeOpacity={0.85}>
-            <Text style={styles.clearFiltersBtnText}>Clear All</Text>
-          </TouchableOpacity>
-        )}
+        <Text style={styles.headerTitle}>Manage Tour Packages</Text>
+        <TouchableOpacity 
+          onPress={() => router.push(adminTourPacksCreateRoute as any)} 
+          style={styles.headerBtn}
+        >
+          <Ionicons name="add" size={28} color="#003580" />
+        </TouchableOpacity>
       </View>
 
-      {activeFilters.length > 0 && (
-        <FlatList
-          data={activeFilters}
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          keyExtractor={(item) => item.key}
-          style={styles.activeFiltersScroller}
-          contentContainerStyle={styles.activeFiltersRow}
-          renderItem={({ item }) => (
-            <TouchableOpacity style={styles.activeFilterChip} onPress={item.onRemove} activeOpacity={0.8}>
-              <Text style={styles.activeFilterChipText}>{item.label}  x</Text>
-            </TouchableOpacity>
-          )}
-        />
-      )}
-
-      {showFilters && (
-        <View style={styles.filtersPanel}>
-          <View style={styles.filtersPanelHeader}>
-            <Text style={styles.filtersPanelTitle}>Filter Options</Text>
-            <TouchableOpacity onPress={() => setShowFilters(false)} activeOpacity={0.8}>
-              <Text style={styles.filtersDoneText}>Done</Text>
-            </TouchableOpacity>
-          </View>
-
-          <ScrollView style={styles.filtersPanelScroll} showsVerticalScrollIndicator={false}>
-            <View style={styles.filterGroup}>
-              <Text style={styles.filterLabel}>Quick Budget</Text>
-            <View style={styles.sortRow}>
-              <TouchableOpacity style={styles.sortBtn} onPress={() => { setMinPrice(''); setMaxPrice('50000'); }}>
-                <Text style={styles.sortBtnText}>Under 50k</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.sortBtn} onPress={() => { setMinPrice('50000'); setMaxPrice('100000'); }}>
-                <Text style={styles.sortBtnText}>50k - 100k</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.sortBtn} onPress={() => { setMinPrice('100000'); setMaxPrice(''); }}>
-                <Text style={styles.sortBtnText}>100k+</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-
-          <View style={styles.filterGroup}>
-            <Text style={styles.filterLabel}>Quick Duration</Text>
-            <View style={styles.sortRow}>
-              <TouchableOpacity style={styles.sortBtn} onPress={() => { setMinDuration('1'); setMaxDuration('3'); }}>
-                <Text style={styles.sortBtnText}>1-3 Days</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.sortBtn} onPress={() => { setMinDuration('4'); setMaxDuration('7'); }}>
-                <Text style={styles.sortBtnText}>4-7 Days</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.sortBtn} onPress={() => { setMinDuration('8'); setMaxDuration(''); }}>
-                <Text style={styles.sortBtnText}>8+ Days</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-
-          <View style={styles.filterGroup}>
-            <Text style={styles.filterLabel}>Price Range (Rs.)</Text>
-            <View style={styles.priceInputRow}>
+      <FlatList
+        data={filteredTourPacks}
+        keyExtractor={(item) => item._id}
+        renderItem={renderCard}
+        contentContainerStyle={styles.listContent}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); fetchTourPacks(); }} colors={['#003580']} />
+        }
+        ListHeaderComponent={
+          <View style={styles.listHeader}>
+            {/* Search Bar */}
+            <View style={styles.searchContainer}>
+              <Ionicons name="search-outline" size={20} color="#999" style={styles.searchIcon} />
               <TextInput
-                style={styles.filterInput}
-                placeholder="Min"
-                keyboardType="numeric"
-                value={minPrice}
-                onChangeText={setMinPrice}
-              />
-              <Text style={styles.separator}>-</Text>
-              <TextInput
-                style={styles.filterInput}
-                placeholder="Max"
-                keyboardType="numeric"
-                value={maxPrice}
-                onChangeText={setMaxPrice}
+                style={styles.searchInput}
+                placeholder="Search packages..."
+                placeholderTextColor="#999"
+                value={searchQuery}
+                onChangeText={setSearchQuery}
               />
             </View>
-          </View>
 
-          <View style={styles.filterGroup}>
-            <Text style={styles.filterLabel}>Duration (Days)</Text>
-            <View style={styles.priceInputRow}>
-              <TextInput
-                style={styles.filterInput}
-                placeholder="Min"
-                keyboardType="numeric"
-                value={minDuration}
-                onChangeText={setMinDuration}
-              />
-              <Text style={styles.separator}>-</Text>
-              <TextInput
-                style={styles.filterInput}
-                placeholder="Max"
-                keyboardType="numeric"
-                value={maxDuration}
-                onChangeText={setMaxDuration}
-              />
-            </View>
-          </View>
-
-
-          <View style={styles.filterGroup}>
-            <Text style={styles.filterLabel}>Difficulty</Text>
-            <View style={styles.difficultyRow}>
-              {['easy', 'moderate', 'hard'].map(level => (
-                <TouchableOpacity
-                  key={level}
-                  style={[styles.difficultyBtn, selectedDifficulty === level && styles.difficultyBtnActive]}
-                  onPress={() => setSelectedDifficulty(selectedDifficulty === level ? '' : level)}
-                >
-                  <Text style={[styles.difficultyBtnText, selectedDifficulty === level && styles.difficultyBtnTextActive]}>
-                    {level.charAt(0).toUpperCase() + level.slice(1)}
-                  </Text>
+            {/* Filter Toggle */}
+            <View style={styles.filterRow}>
+              <TouchableOpacity
+                style={[styles.filterBtn, showFilters && styles.filterBtnActive]}
+                onPress={() => setShowFilters(!showFilters)}
+              >
+                <Ionicons name="options-outline" size={20} color={showFilters ? "#FFF" : "#003580"} />
+                <Text style={[styles.filterBtnText, showFilters && { color: '#FFF' }]}>Filters</Text>
+                {activeFilters.length > 0 && <View style={styles.badge}><Text style={styles.badgeText}>{activeFilters.length}</Text></View>}
+              </TouchableOpacity>
+              
+              {activeFilters.length > 0 && (
+                <TouchableOpacity onPress={clearAllFilters} style={styles.clearBtn}>
+                  <Text style={styles.clearBtnText}>Clear All</Text>
                 </TouchableOpacity>
-              ))}
+              )}
             </View>
-          </View>
 
-          <View style={styles.filterGroup}>
-            <Text style={styles.filterLabel}>Sort By</Text>
-            <View style={styles.sortRow}>
-              {[
-                { value: 'featured', label: 'Featured' },
-                { value: 'price-asc', label: 'Price: Low' },
-                { value: 'price-desc', label: 'Price: High' },
-                { value: 'duration-asc', label: 'Duration' }
-              ].map(sort => (
-                <TouchableOpacity
-                  key={sort.value}
-                  style={[styles.sortBtn, sortBy === sort.value && styles.sortBtnActive]}
-                  onPress={() => setSortBy(sort.value)}
-                >
-                  <Text style={[styles.sortBtnText, sortBy === sort.value && styles.sortBtnTextActive]}>
-                    {sort.label}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
-          </ScrollView>
-        </View>
-      )}
+            {showFilters && (
+              <View style={styles.filtersPanel}>
+                <Text style={styles.panelTitle}>Filter Options</Text>
+                
+                <View style={styles.filterGroup}>
+                  <Text style={styles.groupLabel}>Budget Range</Text>
+                  <View style={styles.chipRow}>
+                    <TouchableOpacity style={styles.chip} onPress={() => { setMinPrice(''); setMaxPrice('50000'); }}>
+                      <Text style={styles.chipText}>Under 50k</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={styles.chip} onPress={() => { setMinPrice('50000'); setMaxPrice('100000'); }}>
+                      <Text style={styles.chipText}>50k - 100k</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={styles.chip} onPress={() => { setMinPrice('100000'); setMaxPrice(''); }}>
+                      <Text style={styles.chipText}>100k+</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
 
-      {/* Content */}
-      {loading ? (
-        <View style={styles.centered}>
-          <ActivityIndicator size="large" color="#003580" />
-          <Text style={styles.loadingText}>Loading packages...</Text>
-        </View>
-      ) : error ? (
-        <View style={styles.centered}>
-          <Text style={styles.errorIcon}>⚠️</Text>
-          <Text style={styles.errorText}>{error}</Text>
-          <TouchableOpacity style={styles.retryBtn} onPress={fetchTourPacks}>
-            <Text style={styles.retryText}>Try Again</Text>
-          </TouchableOpacity>
-        </View>
-      ) : (
-        <FlatList
-          data={filteredTourPacks}
-          keyExtractor={(item) => item._id}
-          renderItem={renderCard}
-          contentContainerStyle={styles.list}
-          showsVerticalScrollIndicator={false}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); fetchTourPacks(); }} colors={['#003580']} />
-          }
-          ListEmptyComponent={
-            <View style={styles.centered}>
-              <Text style={styles.emptyIcon}>🧭</Text>
-              <Text style={styles.emptyTitle}>No packages yet</Text>
-              <Text style={styles.emptyText}>Use + Add to publish the first admin-managed tour package.</Text>
-            </View>
-          }
-        />
-      )}
-    </View>
+                <View style={styles.filterGroup}>
+                  <Text style={styles.groupLabel}>Difficulty</Text>
+                  <View style={styles.chipRow}>
+                    {['easy', 'moderate', 'hard'].map(level => (
+                      <TouchableOpacity
+                        key={level}
+                        style={[styles.chip, selectedDifficulty === level && styles.chipActive]}
+                        onPress={() => setSelectedDifficulty(selectedDifficulty === level ? '' : level)}
+                      >
+                        <Text style={[styles.chipText, selectedDifficulty === level && { color: '#FFF' }]}>
+                          {level.charAt(0).toUpperCase() + level.slice(1)}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
+
+                <View style={styles.filterGroup}>
+                  <Text style={styles.groupLabel}>Sort By</Text>
+                  <View style={styles.chipRow}>
+                    {[
+                      { value: 'featured', label: 'Featured' },
+                      { value: 'price-asc', label: 'Price: Low' },
+                      { value: 'price-desc', label: 'Price: High' },
+                    ].map(sort => (
+                      <TouchableOpacity
+                        key={sort.value}
+                        style={[styles.chip, sortBy === sort.value && styles.chipActive]}
+                        onPress={() => setSortBy(sort.value)}
+                      >
+                        <Text style={[styles.chipText, sortBy === sort.value && { color: '#FFF' }]}>
+                          {sort.label}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
+              </View>
+            )}
+
+            {activeFilters.length > 0 && (
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.activeFiltersScroll}>
+                {activeFilters.map(filter => (
+                  <TouchableOpacity key={filter.key} style={styles.activeChip} onPress={filter.onRemove}>
+                    <Text style={styles.activeChipText}>{filter.label}</Text>
+                    <Ionicons name="close-circle" size={16} color="#003580" />
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            )}
+          </View>
+        }
+        ListEmptyComponent={
+          <View style={styles.centerContainer}>
+            <Ionicons name="compass-outline" size={64} color="#CCC" />
+            <Text style={styles.emptyText}>No packages found.</Text>
+          </View>
+        }
+      />
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#EEF2F8' },
-
-  // Hero Header
-  heroHeader: { height: 300, position: 'relative' },
-  headerBg: { ...StyleSheet.absoluteFillObject as any },
-  headerOverlay: {
-    ...StyleSheet.absoluteFillObject as any,
-    backgroundColor: 'rgba(2, 12, 37, 0.80)',
+  container: {
+    flex: 1,
+    backgroundColor: '#F3F5F7',
   },
-  heroAccentOne: {
-    position: 'absolute',
-    top: 28,
-    right: -30,
-    width: 140,
-    height: 140,
-    borderRadius: 70,
-    backgroundColor: 'rgba(255, 215, 0, 0.18)',
-  },
-  heroAccentTwo: {
-    position: 'absolute',
-    bottom: 18,
-    left: -35,
-    width: 160,
-    height: 160,
-    borderRadius: 80,
-    backgroundColor: 'rgba(0, 136, 255, 0.14)',
-  },
-  headerContent: {
-    paddingHorizontal: 20,
-    paddingTop: 50,
-    paddingBottom: 22,
-  },
-  headerTopRow: {
+  header: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 14,
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingVertical: 15,
+    backgroundColor: '#F3F5F7',
   },
-  backBtn: {
-    backgroundColor: 'rgba(255,255,255,0.10)',
-    paddingHorizontal: 10, paddingVertical: 5,
-    borderRadius: 20,
-    borderWidth: 1, borderColor: 'rgba(255,255,255,0.20)',
-  },
-  backText: { color: '#fff', fontSize: 12, fontWeight: '500' },
-  headerTextBlock: { marginTop: 10, marginBottom: 8 },
-  adminPill: {
-    alignSelf: 'flex-start',
-    backgroundColor: '#FFD700',
-    paddingHorizontal: 12,
-    paddingVertical: 5,
-    borderRadius: 999,
-    marginBottom: 10,
-  },
-  adminPillText: { color: '#0B1E44', fontSize: 11, fontWeight: '800', letterSpacing: 1.2 },
-  headerSub: {
-    color: 'rgba(255,255,255,0.72)', fontSize: 11,
-    letterSpacing: 3, marginBottom: 4,
+  headerBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#FFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 5,
+    elevation: 2,
   },
   headerTitle: {
-    color: '#fff', fontSize: 34,
-    fontWeight: '900', letterSpacing: 0.3,
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#1a1a1a',
+    letterSpacing: -0.5,
   },
-  headerDesc: { color: 'rgba(255,255,255,0.78)', fontSize: 14, marginTop: 6, lineHeight: 20 },
-  addBtn: {
-    backgroundColor: '#FFD700',
-    paddingHorizontal: 16, paddingVertical: 8,
-    borderRadius: 20,
+  listContent: {
+    padding: 20,
+    paddingTop: 0,
+    paddingBottom: 40,
   },
-  addBtnText: { color: '#0B1E44', fontSize: 13, fontWeight: '800' },
-
-  adminSummary: {
-    marginHorizontal: 20,
-    marginTop: -22,
-    marginBottom: 14,
-    backgroundColor: '#0B1E44',
-    borderRadius: 22,
-    padding: 16,
+  listHeader: {
+    marginBottom: 20,
+  },
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFF',
+    borderRadius: 16,
+    paddingHorizontal: 15,
+    height: 54,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.16,
-    shadowRadius: 16,
-    elevation: 8,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    elevation: 2,
+    marginBottom: 15,
   },
-  summaryHeader: {
+  searchIcon: {
+    marginRight: 10,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 16,
+    color: '#1a1a1a',
+  },
+  filterRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
   },
-  summaryTitle: { color: '#fff', fontSize: 16, fontWeight: '800' },
-  summaryNote: { color: 'rgba(255,255,255,0.6)', fontSize: 11 },
-  summaryGrid: {
+  filterBtn: {
     flexDirection: 'row',
-    gap: 10,
+    alignItems: 'center',
+    backgroundColor: '#FFF',
+    paddingHorizontal: 15,
+    paddingVertical: 10,
+    borderRadius: 12,
+    gap: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 5,
+    elevation: 1,
   },
-  summaryCard: {
-    flex: 1,
-    backgroundColor: 'rgba(255,255,255,0.06)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
-    borderRadius: 16,
-    paddingVertical: 14,
+  filterBtnActive: {
+    backgroundColor: '#003580',
+  },
+  filterBtnText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#003580',
+  },
+  badge: {
+    backgroundColor: '#FFD700',
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    justifyContent: 'center',
     alignItems: 'center',
   },
-  summaryValue: { color: '#FFD700', fontSize: 24, fontWeight: '900' },
-  summaryLabel: { color: 'rgba(255,255,255,0.72)', fontSize: 11, marginTop: 4, letterSpacing: 0.4 },
-
-  // Cards
-  list: { padding: 16, gap: 20, paddingTop: 6, paddingBottom: 28 },
+  badgeText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#003580',
+  },
+  clearBtn: {
+    padding: 5,
+  },
+  clearBtnText: {
+    fontSize: 14,
+    color: '#E53935',
+    fontWeight: '600',
+  },
+  filtersPanel: {
+    backgroundColor: '#FFF',
+    borderRadius: 20,
+    padding: 20,
+    marginTop: 15,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.05,
+    shadowRadius: 15,
+    elevation: 2,
+  },
+  panelTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#1a1a1a',
+    marginBottom: 15,
+  },
+  filterGroup: {
+    marginBottom: 15,
+  },
+  groupLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#666',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 10,
+  },
+  chipRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  chip: {
+    backgroundColor: '#F3F5F7',
+    paddingHorizontal: 15,
+    paddingVertical: 8,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  chipActive: {
+    backgroundColor: '#003580',
+    borderColor: '#003580',
+  },
+  chipText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#4A5568',
+  },
+  activeFiltersScroll: {
+    marginTop: 15,
+  },
+  activeChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#E8F0FF',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    marginRight: 10,
+    gap: 6,
+    borderWidth: 1,
+    borderColor: '#C7D2FE',
+  },
+  activeChipText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#003580',
+  },
   card: {
-    height: 270, borderRadius: 28,
-    overflow: 'hidden', backgroundColor: '#001a4d',
-    shadowColor: '#000', shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.22, shadowRadius: 18, elevation: 10,
+    backgroundColor: '#FFF',
+    borderRadius: 24,
+    marginBottom: 24,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.08,
+    shadowRadius: 20,
+    elevation: 5,
   },
-  cardBg: { ...StyleSheet.absoluteFillObject as any },
-  cardOverlay: {
-    ...StyleSheet.absoluteFillObject as any,
-    backgroundColor: 'rgba(3, 16, 45, 0.42)',
+  cardHero: {
+    width: '100%',
+    height: 200,
+    position: 'relative',
   },
-  cardTop: {
-    flexDirection: 'row', justifyContent: 'space-between',
-    padding: 16,
+  heroImage: {
+    width: '100%',
+    height: '100%',
+  },
+  heroOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.1)',
   },
   featuredBadge: {
     position: 'absolute',
     top: 16,
     left: 16,
     backgroundColor: '#FFD700',
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: 12,
     paddingVertical: 6,
-    borderRadius: 20,
-    zIndex: 2,
+    borderRadius: 12,
+    gap: 4,
   },
-  featuredBadgeText: {
-    color: '#003580',
-    fontSize: 11,
-    fontWeight: '800',
-    letterSpacing: 1,
-  },
-  durationPill: {
-    backgroundColor: '#003580',
-    paddingHorizontal: 12, paddingVertical: 5,
-    borderRadius: 20,
-  },
-  durationText: { color: '#fff', fontSize: 12, fontWeight: '600' },
-  groupPill: {
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    paddingHorizontal: 12, paddingVertical: 5,
-    borderRadius: 20,
-    borderWidth: 1, borderColor: 'rgba(255,255,255,0.3)',
-  },
-  groupText: { color: '#fff', fontSize: 12, fontWeight: '500' },
-  cardBottom: {
-    position: 'absolute', bottom: 0,
-    left: 0, right: 0, padding: 18,
-    backgroundColor: 'rgba(0,10,40,0.62)',
-  },
-  cardDestination: {
-    color: 'rgba(255,255,255,0.75)',
-    fontSize: 12, marginBottom: 4, letterSpacing: 0.5,
-  },
-  cardName: {
-    color: '#fff', fontSize: 20,
-    fontWeight: '800', marginBottom: 12, lineHeight: 26,
-  },
-  cardFooterRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between', alignItems: 'flex-end',
-  },
-  fromLabel: { color: 'rgba(255,255,255,0.6)', fontSize: 11 },
-  priceText: { color: '#FFD700', fontSize: 18, fontWeight: '800' },
-  viewBtn: {
-    backgroundColor: '#FFD700',
-    paddingHorizontal: 14, paddingVertical: 7,
-    borderRadius: 20,
-  },
-  viewBtnText: { color: '#0B1E44', fontSize: 12, fontWeight: '800' },
-
-  // Search
-  searchContainer: {
-    backgroundColor: '#fff',
-    marginHorizontal: 20, marginTop: 0, marginBottom: 20,
-    borderRadius: 18, padding: 16,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1, shadowRadius: 10, elevation: 4,
-  },
-  searchInput: {
-    backgroundColor: '#F6F8FD', borderRadius: 14,
-    padding: 14, fontSize: 14, color: '#1A1A2E',
-    borderWidth: 1, borderColor: '#DCE3F2',
-  },
-
-  filtersActionRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    marginTop: -8,
-    marginBottom: 8,
-  },
-  filterBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#0B1E44',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 24,
-  },
-  filterBtnText: { color: '#fff', fontWeight: '700', fontSize: 14 },
-  filterBadge: {
-    marginLeft: 8,
-    minWidth: 22,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 10,
-    textAlign: 'center',
-    backgroundColor: '#FFD700',
-    color: '#0B1E44',
+  featuredText: {
     fontSize: 12,
     fontWeight: '800',
-  },
-  clearFiltersBtn: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 14,
-    backgroundColor: '#FFE5E5',
-    borderWidth: 1,
-    borderColor: '#FFCACA',
-  },
-  clearFiltersBtnText: { color: '#C62828', fontWeight: '700', fontSize: 12 },
-  activeFiltersRow: {
-    paddingHorizontal: 16,
-    paddingRight: 24,
-    paddingBottom: 10,
-    paddingTop: 2,
-    alignItems: 'center',
-  },
-  activeFiltersScroller: {
-    minHeight: 44,
-  },
-  activeFilterChip: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 999,
-    backgroundColor: '#E8F0FF',
-    borderWidth: 1,
-    borderColor: '#C6D8FF',
-    marginRight: 8,
-    flexShrink: 0,
-  },
-  activeFilterChipText: { color: '#1E4AA8', fontSize: 12, fontWeight: '700' },
-  filtersPanel: {
-    backgroundColor: '#fff',
-    marginHorizontal: 20,
-    marginBottom: 18,
-    borderRadius: 16,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: '#DCE3F2',
-    maxHeight: 290,
-  },
-  filtersPanelHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  filtersPanelTitle: {
-    fontSize: 14,
-    fontWeight: '800',
-    color: '#1A1A2E',
-  },
-  filtersDoneText: {
     color: '#003580',
-    fontWeight: '700',
-    fontSize: 13,
+    textTransform: 'uppercase',
   },
-  filtersPanelScroll: {
-    maxHeight: 240,
+  priceFloatingBadge: {
+    position: 'absolute',
+    bottom: 16,
+    right: 16,
+    backgroundColor: '#003580',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 18,
   },
-  filterGroup: { marginBottom: 16 },
-  filterLabel: { fontSize: 14, fontWeight: '700', color: '#1A1A2E', marginBottom: 10 },
-  filterInput: {
-    flex: 1,
-    backgroundColor: '#F6F8FD',
-    borderRadius: 10,
-    padding: 10,
-    fontSize: 13,
-    color: '#333',
-    borderWidth: 1,
-    borderColor: '#DCE3F2',
+  priceLabel: {
+    color: 'rgba(255,255,255,0.7)',
+    fontSize: 10,
+    fontWeight: '600',
+    textTransform: 'uppercase',
   },
-  priceInputRow: { flexDirection: 'row', gap: 8, alignItems: 'center' },
-  separator: { color: '#999', fontSize: 16, fontWeight: '600' },
-  difficultyRow: { flexDirection: 'row', gap: 8 },
-  difficultyBtn: {
-    flex: 1,
-    paddingVertical: 8,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#DCE3F2',
-    backgroundColor: '#F6F8FD',
+  priceAmount: {
+    color: '#FFF',
+    fontSize: 16,
+    fontWeight: '800',
+  },
+  cardContent: {
+    padding: 20,
+  },
+  mainInfo: {
+    marginBottom: 12,
+  },
+  nameText: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: '#1a1a1a',
+  },
+  destinationText: {
+    fontSize: 14,
+    color: '#666',
+    fontWeight: '600',
+    marginTop: 2,
+  },
+  statsRow: {
+    flexDirection: 'row',
+    marginBottom: 20,
+    gap: 15,
+  },
+  statItem: {
+    flexDirection: 'row',
     alignItems: 'center',
-  },
-  difficultyBtnActive: { backgroundColor: '#0B1E44', borderColor: '#0B1E44' },
-  difficultyBtnText: { fontSize: 13, fontWeight: '600', color: '#666' },
-  difficultyBtnTextActive: { color: '#fff' },
-  sortRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  sortBtn: {
-    paddingHorizontal: 12,
+    gap: 8,
+    backgroundColor: '#F8F9FA',
     paddingVertical: 8,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#DCE3F2',
-    backgroundColor: '#F6F8FD',
+    paddingHorizontal: 12,
+    borderRadius: 10,
   },
-  sortBtnActive: { backgroundColor: '#FFD700', borderColor: '#FFD700' },
-  sortBtnText: { fontSize: 12, fontWeight: '600', color: '#666' },
-  sortBtnTextActive: { color: '#0B1E44' },
-
-  // States
-  centered: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 30 },
-  loadingText: { color: '#003580', marginTop: 12, fontSize: 14 },
-  errorIcon: { fontSize: 40, marginBottom: 12 },
-  errorText: { color: '#333', fontSize: 15, textAlign: 'center', marginBottom: 16 },
-  retryBtn: {
-    backgroundColor: '#003580', paddingHorizontal: 28,
-    paddingVertical: 12, borderRadius: 24,
+  statText: {
+    fontSize: 14,
+    color: '#2D3748',
+    fontWeight: '700',
   },
-  retryText: { color: '#fff', fontWeight: '700', fontSize: 15 },
-  emptyIcon: { fontSize: 50, marginBottom: 12 },
-  emptyTitle: { fontSize: 18, fontWeight: '700', color: '#1A1A2E', marginBottom: 8 },
-  emptyText: { color: '#888', fontSize: 14, textAlign: 'center' },
+  viewButton: {
+    backgroundColor: '#003580',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 14,
+    borderRadius: 16,
+    gap: 10,
+  },
+  viewButtonText: {
+    color: '#FFF',
+    fontWeight: '700',
+    fontSize: 16,
+  },
+  centerContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 40,
+  },
+  emptyText: {
+    fontSize: 16,
+    color: '#A0AEC0',
+    marginTop: 10,
+    fontWeight: '600',
+  },
 });

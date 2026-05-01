@@ -62,13 +62,7 @@ export default function AdminScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.push('/')} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color="#000" />
-        </TouchableOpacity>
         <Text style={styles.headerTitle}>Admin Dashboard</Text>
-        <TouchableOpacity onPress={() => router.push('/')} style={styles.backButton}>
-          <Ionicons name="home-outline" size={22} color="#000" />
-        </TouchableOpacity>
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
@@ -88,30 +82,19 @@ export default function AdminScreen() {
             <Ionicons name="people-outline" size={20} color="#FFF" />
             <Text style={styles.actionButtonText}>User Management</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.actionButton}>
-            <Ionicons name="map-outline" size={20} color="#FFF" />
-            <Text style={styles.actionButtonText}>Add New Destination</Text>
-          </TouchableOpacity>
           <TouchableOpacity 
             style={styles.actionButton}
-            onPress={() => router.push({ pathname: '/add-transportation', params: { admin: 'true' } })}
+            onPress={() => router.push({ pathname: '/transportation', params: { admin: 'true' } })}
           >
-            <Ionicons name="bus-outline" size={20} color="#FFF" />
-            <Text style={styles.actionButtonText}>Add New Transportation</Text>
+            <Ionicons name="car-sport-outline" size={20} color="#FFF" />
+            <Text style={styles.actionButtonText}>Transportation Management</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.actionButton}
             onPress={() => router.push('/admin/my-tourpacks/index')}
           >
             <Ionicons name="briefcase-outline" size={20} color="#FFF" />
-            <Text style={styles.actionButtonText}>Manage Tour Packages</Text>
-          </TouchableOpacity>
-          <TouchableOpacity 
-            style={styles.actionButton}
-            onPress={() => router.push({ pathname: '/add-hotel', params: { admin: 'true' } })}
-          >
-            <Ionicons name="home-outline" size={20} color="#FFF" />
-            <Text style={styles.actionButtonText}>Add new Hotel / Accommodation</Text>
+            <Text style={styles.actionButtonText}>Tour Packages Managment</Text>
           </TouchableOpacity>
           
           <TouchableOpacity 
@@ -151,7 +134,7 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
     paddingHorizontal: 20,
     paddingVertical: 15,
     backgroundColor: '#FFF',

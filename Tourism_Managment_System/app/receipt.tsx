@@ -249,7 +249,7 @@ export default function ReceiptScreen() {
             </View>
           </View>
 
-          <TouchableOpacity style={styles.doneButton} onPress={() => router.push('/')}>
+          <TouchableOpacity style={styles.doneButton} onPress={() => router.push('/explore')}>
             <Text style={styles.doneButtonText}>Finish</Text>
           </TouchableOpacity>
         </View>
