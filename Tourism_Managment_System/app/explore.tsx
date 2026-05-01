@@ -16,21 +16,22 @@ import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 import Animated, { FadeInDown } from 'react-native-reanimated';
+import { API_BASE } from '../src/config';
 
-const API_URL = Platform.OS === 'android' ? 'http://10.0.2.2:5000' : 'http://localhost:5000';
+const API_URL = `${API_BASE}/api/tourpacks`;
 const { width } = Dimensions.get('window');
 
-type Hotel = {
+type TourPack = {
   _id: string;
   name: string;
-  location: string;
+  destination: string;
   description?: string;
   image?: string;
   rating?: number;
-  pricePerNight: number;
-  accommodationType: string;
-  availableRooms: number;
-  isAvailable?: boolean;
+  price: number;
+  duration: number;
+  category?: string;
+  featured?: boolean;
 };
 
 const formatPrice = (value: number) =>
@@ -39,15 +40,8 @@ const formatPrice = (value: number) =>
     maximumFractionDigits: 2,
   })}`;
 
-const categoryForHotel = (hotel: Hotel) => {
-  const type = hotel.accommodationType.toLowerCase();
-  const location = hotel.location.toLowerCase();
-
-  if (type.includes('beach') || location.includes('beach') || location.includes('negombo')) return 'Beach';
-  if (type.includes('hill') || type.includes('mountain') || location.includes('ella') || location.includes('kandy')) return 'Mountain';
-  if (type.includes('city') || location.includes('colombo')) return 'City';
-  if (location.includes('dambulla') || type.includes('eco')) return 'Nature';
-  return 'Featured';
+const categoryForPackage = (pkg: TourPack) => {
+  return pkg.category || 'Featured';
 };
 
 export default function Explore() {
@@ -55,20 +49,20 @@ export default function Explore() {
   const [activeCategory, setActiveCategory] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
-  const [hotels, setHotels] = useState<Hotel[]>([]);
+  const [packages, setPackages] = useState<TourPack[]>([]);
 
-  const fetchHotels = async () => {
+  const fetchPackages = async () => {
     setLoading(true);
     try {
-      const response = await fetch(`${API_URL}/api/hotels`);
+      const response = await fetch(API_URL);
       const data = await response.json();
-      if (response.ok) {
-        setHotels(Array.isArray(data) ? data : []);
+      if (response.ok && data.success) {
+        setPackages(Array.isArray(data.data) ? data.data : []);
       } else {
-        setHotels([]);
+        setPackages([]);
       }
     } catch {
-      setHotels([]);
+      setPackages([]);
     } finally {
       setLoading(false);
     }
@@ -76,51 +70,51 @@ export default function Explore() {
 
   useFocusEffect(
     React.useCallback(() => {
-      fetchHotels();
+      fetchPackages();
     }, [])
   );
 
   const categories = useMemo(() => {
-    const dynamicCategories = Array.from(new Set(hotels.map(categoryForHotel)));
+    const dynamicCategories = Array.from(new Set(packages.map(categoryForPackage)));
     return ['All', ...dynamicCategories];
-  }, [hotels]);
+  }, [packages]);
 
-  const filteredHotels = useMemo(() => {
-    return hotels.filter((item) => {
-      const category = categoryForHotel(item);
+  const filteredPackages = useMemo(() => {
+    return packages.filter((item) => {
+      const category = categoryForPackage(item);
       const matchesCategory = activeCategory === 'All' || category === activeCategory;
       const matchesSearch =
         item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.location.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.accommodationType.toLowerCase().includes(searchQuery.toLowerCase());
+        item.destination.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (item.category && item.category.toLowerCase().includes(searchQuery.toLowerCase()));
       return matchesCategory && matchesSearch;
     });
-  }, [activeCategory, hotels, searchQuery]);
+  }, [activeCategory, packages, searchQuery]);
 
-  const renderHotelCard = ({ item, index }: { item: Hotel; index: number }) => (
+  const renderPackageCard = ({ item, index }: { item: TourPack; index: number }) => (
     <Animated.View entering={FadeInDown.delay(index * 90).duration(700)} style={styles.cardContainer}>
       <TouchableOpacity
         activeOpacity={0.92}
         style={styles.card}
-        onPress={() => router.push({ pathname: '/hotel-details', params: { id: item._id } })}
+        onPress={() => router.push({ pathname: "/my-tourpacks/[tourPackageId]", params: { tourPackageId: item._id } })}
       >
         {item.image ? (
-          <Image source={{ uri: item.image }} style={styles.cardImage} contentFit="cover" transition={500} />
+          <Image source={{ uri: `${API_BASE}${item.image}` }} style={styles.cardImage} contentFit="cover" transition={500} />
         ) : (
           <View style={styles.cardImageFallback}>
-            <Ionicons name="business-outline" size={52} color="#CBD5E1" />
+            <Ionicons name="map-outline" size={52} color="#CBD5E1" />
           </View>
         )}
 
         <View style={styles.cardOverlay} />
 
         <View style={styles.priceBadge}>
-          <Text style={styles.priceText}>{formatPrice(item.pricePerNight)}</Text>
+          <Text style={styles.priceText}>{formatPrice(item.price)}</Text>
         </View>
 
         <View style={styles.availabilityBadge}>
           <Text style={styles.availabilityText}>
-            {item.availableRooms > 0 && item.isAvailable !== false ? `${item.availableRooms} rooms` : 'Sold out'}
+            {item.duration} Days
           </Text>
         </View>
 
@@ -128,10 +122,10 @@ export default function Explore() {
           <View style={styles.cardTopRow}>
             <View style={styles.ratingBadge}>
               <Ionicons name="star" size={12} color="#FACC15" />
-              <Text style={styles.ratingText}>{(item.rating ?? 0).toFixed(1)}</Text>
+              <Text style={styles.ratingText}>{(item.rating ?? 4.5).toFixed(1)}</Text>
             </View>
             <View style={styles.categoryBadge}>
-              <Text style={styles.categoryBadgeText}>{categoryForHotel(item)}</Text>
+              <Text style={styles.categoryBadgeText}>{categoryForPackage(item)}</Text>
             </View>
           </View>
 
@@ -139,9 +133,9 @@ export default function Explore() {
             <Text style={styles.destinationName}>{item.name}</Text>
             <View style={styles.locationContainer}>
               <Ionicons name="location" size={14} color="#E2E8F0" />
-              <Text style={styles.destinationLocation}>{item.location}</Text>
+              <Text style={styles.destinationLocation}>{item.destination}</Text>
             </View>
-            <Text style={styles.accommodationType}>{item.accommodationType}</Text>
+            <Text style={styles.accommodationType}>{item.category || 'General Tour'}</Text>
           </View>
         </View>
       </TouchableOpacity>
@@ -156,16 +150,16 @@ export default function Explore() {
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <Ionicons name="chevron-back" size={28} color="#000" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Explore</Text>
+        <Text style={styles.headerTitle}>Explore Packages</Text>
         <TouchableOpacity onPress={() => router.push('/')} style={styles.profileButton}>
           <Ionicons name="home-outline" size={22} color="#111827" />
         </TouchableOpacity>
       </View>
 
       <FlatList
-        data={filteredHotels}
+        data={filteredPackages}
         keyExtractor={(item) => item._id}
-        renderItem={renderHotelCard}
+        renderItem={renderPackageCard}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.listContent}
         ListHeaderComponent={
@@ -174,7 +168,7 @@ export default function Explore() {
               <View style={styles.searchBar}>
                 <Ionicons name="search" size={20} color="#888" />
                 <TextInput
-                  placeholder="Search stays by name, location, or type..."
+                  placeholder="Search packages by name, destination, or category..."
                   style={styles.searchInput}
                   value={searchQuery}
                   onChangeText={setSearchQuery}
@@ -207,10 +201,10 @@ export default function Explore() {
 
             <Animated.View entering={FadeInDown.delay(280)} style={styles.sectionHeader}>
               <View>
-                <Text style={styles.sectionTitle}>Available stays</Text>
-                <Text style={styles.sectionSubtitle}>Live data from your tourism catalog</Text>
+                <Text style={styles.sectionTitle}>Adventure awaits</Text>
+                <Text style={styles.sectionSubtitle}>Discover Sri Lanka's finest tour packages</Text>
               </View>
-              <TouchableOpacity onPress={fetchHotels}>
+              <TouchableOpacity onPress={fetchPackages}>
                 <Text style={styles.seeAllText}>Refresh</Text>
               </TouchableOpacity>
             </Animated.View>
@@ -224,7 +218,7 @@ export default function Explore() {
           ) : (
             <View style={styles.emptyContainer}>
               <Ionicons name="search-outline" size={64} color="#CBD5E1" />
-              <Text style={styles.emptyTitle}>No stays found</Text>
+              <Text style={styles.emptyTitle}>No packages found</Text>
               <Text style={styles.emptyText}>Try another search term or category.</Text>
             </View>
           )
@@ -345,7 +339,7 @@ const styles = StyleSheet.create({
   cardContainer: {
     marginHorizontal: 20,
     marginBottom: 20,
-    width: width - 40,
+    alignSelf: 'stretch',
     height: 255,
     borderRadius: 24,
     overflow: 'hidden',

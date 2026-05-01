@@ -29,7 +29,7 @@ export default function AdminEditTourPackScreen() {
   const [form, setForm] = useState({
     name: '', description: '', price: '',
     duration: '', maxGroupSize: '', destination: '',
-    kilometers: '', inclusions: '', availabilityDates: [] as string[],
+    inclusions: '', availabilityDates: [] as string[],
     category: '', tags: '', featured: false, difficulty: 'moderate',
   });
   const [errors, setErrors] = useState<any>({});
@@ -57,7 +57,6 @@ export default function AdminEditTourPackScreen() {
             description: pack.description || '',
             price: String(pack.price || ''),
             duration: String(pack.duration || ''),
-            kilometers: String(pack.kilometers || ''),
             maxGroupSize: String(pack.maxGroupSize || ''),
             destination: pack.destination || '',
             inclusions: Array.isArray(pack.inclusions) ? pack.inclusions.join(', ') : '',
@@ -225,7 +224,6 @@ export default function AdminEditTourPackScreen() {
       formData.append('description', form.description);
       formData.append('price', form.price);
       formData.append('duration', form.duration);
-      formData.append('kilometers', form.kilometers || '0');
       formData.append('maxGroupSize', form.maxGroupSize || '10');
       formData.append('destination', form.destination);
       if (form.inclusions) {
@@ -514,30 +512,18 @@ export default function AdminEditTourPackScreen() {
               {errors.duration && <Text style={styles.errText}>{errors.duration}</Text>}
             </View>
           </View>
-          <View style={styles.row}>
-            <View style={[styles.field, { flex: 1, marginRight: 10 }]}>
-              <Text style={styles.label}>Kilometers (Distance)</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="e.g. 150"
-                placeholderTextColor="#BBB"
-                value={form.kilometers}
-                onChangeText={value => update('kilometers', value)}
-                keyboardType="numeric"
-              />
-            </View>
-            <View style={[styles.field, { flex: 1 }]}>
-              <Text style={styles.label}>Max Group Size</Text>
-              <TextInput
-                style={[styles.input, errors.maxGroupSize && styles.inputError]}
-                placeholder="e.g. 10"
-                placeholderTextColor="#BBB"
-                value={form.maxGroupSize}
-                onChangeText={value => update('maxGroupSize', value)}
-                keyboardType="numeric"
-              />
-              {errors.maxGroupSize && <Text style={styles.errText}>{errors.maxGroupSize}</Text>}
-            </View>
+          {/* Max Group Size */}
+          <View style={styles.field}>
+            <Text style={styles.label}>Max Group Size</Text>
+            <TextInput
+              style={[styles.input, errors.maxGroupSize && styles.inputError]}
+              placeholder="e.g. 10"
+              placeholderTextColor="#BBB"
+              value={form.maxGroupSize}
+              onChangeText={value => update('maxGroupSize', value)}
+              keyboardType="numeric"
+            />
+            {errors.maxGroupSize && <Text style={styles.errText}>{errors.maxGroupSize}</Text>}
           </View>
           <View style={styles.field}>
             <Text style={styles.label}>Inclusions</Text>

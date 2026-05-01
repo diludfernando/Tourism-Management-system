@@ -31,7 +31,12 @@ const bookingSchema = mongoose.Schema(
     hotel: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Hotel',
-      required: [true, 'Hotel is required'],
+      required: false,
+    },
+    tourPack: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'TourPack',
+      required: false,
     },
     transportation: {
       type: mongoose.Schema.Types.ObjectId,
@@ -40,11 +45,11 @@ const bookingSchema = mongoose.Schema(
     },
     checkInDate: {
       type: Date,
-      required: [true, 'Check-in date is required'],
+      required: false,
     },
     checkOutDate: {
       type: Date,
-      required: [true, 'Check-out date is required'],
+      required: false,
     },
     guests: {
       type: Number,
@@ -63,18 +68,23 @@ const bookingSchema = mongoose.Schema(
     },
     rooms: {
       type: Number,
-      required: [true, 'Room count is required'],
-      min: [1, 'At least one room is required'],
+      required: false,
+      min: [0, 'Room count cannot be negative'],
     },
     nights: {
       type: Number,
-      required: true,
-      min: [1, 'At least one night is required'],
+      required: false,
+      min: [0, 'Nights cannot be negative'],
     },
     stayAmount: {
       type: Number,
-      required: true,
+      required: false,
       min: [0, 'Stay amount cannot be negative'],
+    },
+    packageAmount: {
+      type: Number,
+      required: false,
+      min: [0, 'Package amount cannot be negative'],
     },
     transportationAmount: {
       type: Number,

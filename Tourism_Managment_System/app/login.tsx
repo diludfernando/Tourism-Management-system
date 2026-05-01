@@ -15,8 +15,10 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import { Image } from 'expo-image';
+import { API_BASE } from '../src/config';
+import { saveAuthSession } from '../src/auth';
 
-const API_URL = Platform.OS === 'android' ? 'http://10.0.2.2:5000' : 'http://localhost:5000';
+const API_URL = `${API_BASE}/api/users`;
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -36,7 +38,7 @@ export default function LoginScreen() {
     setLoading(true);
     
     try {
-      const response = await fetch(`${API_URL}/api/users/login`, {
+      const response = await fetch(`${API_URL}/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -47,7 +49,8 @@ export default function LoginScreen() {
       const data = await response.json();
 
       if (response.ok) {
-        // Here you could save data.token to AsyncStorage
+        // Save the token and role
+        await saveAuthSession(data.token, data.role);
         console.log('✅ Login successful:', data.email, 'Role:', data.role);
         
         if (data.role === 'admin') {

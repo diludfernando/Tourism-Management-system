@@ -13,8 +13,9 @@ import {
 } from 'react-native';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { API_BASE } from '../src/config';
 
-const API_URL = Platform.OS === 'android' ? 'http://10.0.2.2:5000' : 'http://localhost:5000';
+const API_URL = `${API_BASE}/api/bookings`;
 const STATUS_FILTERS = ['all', 'pending', 'confirmed', 'completed', 'cancelled'] as const;
 
 const formatPrice = (value: number) =>
@@ -98,7 +99,7 @@ export default function BookingManagementScreen() {
 
   const fetchBookings = async () => {
     try {
-      const response = await fetch(`${API_URL}/api/bookings`);
+      const response = await fetch(API_URL);
       const data = await parseResponseBody(response);
       if (response.ok) {
         setBookings(Array.isArray(data) ? data : []);
@@ -150,7 +151,7 @@ export default function BookingManagementScreen() {
   const patchBooking = async (id: string, payload: Partial<Booking>) => {
     setProcessingId(id);
     try {
-      const response = await fetch(`${API_URL}/api/bookings/${id}`, {
+      const response = await fetch(`${API_URL}/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -184,7 +185,7 @@ export default function BookingManagementScreen() {
   const deleteBooking = async (id: string) => {
     setProcessingId(id);
     try {
-      const response = await fetch(`${API_URL}/api/bookings/${id}`, { method: 'DELETE' });
+      const response = await fetch(`${API_URL}/${id}`, { method: 'DELETE' });
       const data = await parseResponseBody(response);
       if (!response.ok) {
         setFeedback({

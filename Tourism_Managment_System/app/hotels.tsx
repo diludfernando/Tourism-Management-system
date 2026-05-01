@@ -12,8 +12,9 @@ import {
 } from 'react-native';
 import { useRouter, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { API_BASE } from '../src/config';
 
-const API_URL = Platform.OS === 'android' ? 'http://10.0.2.2:5000' : 'http://localhost:5000';
+const API_URL = `${API_BASE}/api/hotels`;
 const formatPrice = (value: number) =>
   `LKR ${Number(value || 0).toLocaleString(undefined, {
     minimumFractionDigits: 2,
@@ -22,16 +23,20 @@ const formatPrice = (value: number) =>
 
 export default function HotelListScreen() {
   const router = useRouter();
-  const { transportId, admin } = useLocalSearchParams<{ transportId?: string; admin?: string }>();
+  const { transportId, tourPackId, admin } = useLocalSearchParams<{ 
+    transportId?: string; 
+    tourPackId?: string; 
+    admin?: string 
+  }>();
   const [hotels, setHotels] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const isAdminMode = admin === 'true';
-  const isSelectionMode = Boolean(transportId);
+  const isSelectionMode = Boolean(transportId) || Boolean(tourPackId);
 
   const fetchHotels = async () => {
     setLoading(true);
     try {
-      const response = await fetch(`${API_URL}/api/hotels`);
+      const response = await fetch(API_URL);
       const data = await response.json();
       if (response.ok) {
         setHotels(data);
@@ -54,7 +59,7 @@ export default function HotelListScreen() {
 
   const executeDelete = async (id: string) => {
     try {
-      const response = await fetch(`${API_URL}/api/hotels/${id}`, {
+      const response = await fetch(`${API_URL}/${id}`, {
         method: 'DELETE',
       });
       if (response.ok) {
@@ -105,6 +110,7 @@ export default function HotelListScreen() {
             id: item._id,
             ...(isAdminMode ? { admin: 'true' } : {}),
             ...(transportId ? { transportId } : {}),
+            ...(tourPackId ? { tourPackId } : {}),
           },
         })
       }

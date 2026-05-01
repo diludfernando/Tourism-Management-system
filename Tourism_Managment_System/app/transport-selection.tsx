@@ -10,13 +10,14 @@ import {
   RefreshControl,
   Platform
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import { Image } from 'expo-image';
+import { API_BASE } from '../src/config';
 
 // Configuration for API URL
-const API_URL = Platform.OS === 'android' ? 'http://10.0.2.2:5000' : 'http://localhost:5000';
+const API_URL = `${API_BASE}/api/transportation`;
 const formatPrice = (value: number) =>
   `LKR ${Number(value || 0).toLocaleString(undefined, {
     minimumFractionDigits: 2,
@@ -36,13 +37,14 @@ interface Vehicle {
 
 export default function TransportSelectionScreen() {
   const router = useRouter();
+  const { hotelId, tourPackId } = useLocalSearchParams<{ hotelId?: string; tourPackId?: string }>();
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
   const fetchVehicles = async () => {
     try {
-      const response = await fetch(`${API_URL}/api/transportation`);
+      const response = await fetch(API_URL);
       const data = await response.json();
       if (response.ok) {
         setVehicles(data);
@@ -125,12 +127,16 @@ export default function TransportSelectionScreen() {
 
         <TouchableOpacity 
           style={styles.actionButton}
-          onPress={() =>
+          onPress={() => {
             router.push({
               pathname: '/hotels',
-              params: { transportId: item._id },
-            })
-          }
+              params: { 
+                transportId: item._id,
+                ...(hotelId ? { hotelId } : {}),
+                ...(tourPackId ? { tourPackId } : {}),
+              },
+            });
+          }}
         >
           <Text style={styles.actionButtonText}>Book Now</Text>
           <Ionicons name="arrow-forward" size={18} color="#FFF" />

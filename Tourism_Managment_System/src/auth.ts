@@ -62,8 +62,9 @@ export const getAuthToken = async () => {
 
 export const getAuthHeaders = async (baseHeaders: Record<string, string> = {}) => {
   try {
+    console.log('getAuthHeaders - requesting token...');
     const token = await getAuthToken();
-    console.log('getAuthHeaders - token retrieved:', token ? 'YES' : 'NO');
+    console.log('getAuthHeaders - token result:', token ? 'FOUND' : 'MISSING');
     if (!token) return baseHeaders;
     return {
       ...baseHeaders,

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, ScrollView,
   TouchableOpacity, ActivityIndicator, Dimensions, FlatList, Modal,
+  TextInput, Alert
 } from 'react-native';
 import { Image } from 'expo-image';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -18,7 +19,6 @@ type TourPack = {
   duration: number;
   destination: string;
   maxGroupSize: number;
-  kilometers: number;
   image: string;
   gallery?: { url: string; caption: string; isFeatured: boolean }[];
   inclusions: string[];
@@ -37,6 +37,9 @@ export default function TourPackDetailScreen() {
   const [error, setError] = useState('');
   const [selectedGalleryIndex, setSelectedGalleryIndex] = useState(0);
   const [isGalleryViewerVisible, setIsGalleryViewerVisible] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+
+
 
   useEffect(() => {
     const fetchTourPack = async () => {
@@ -124,11 +127,6 @@ export default function TourPackDetailScreen() {
           <View style={styles.statItem}>
             <Text style={styles.statValue}>{tourPack.maxGroupSize}</Text>
             <Text style={styles.statLabel}>Max Group</Text>
-          </View>
-          <View style={styles.statDivider} />
-          <View style={styles.statItem}>
-            <Text style={styles.statValue}>{tourPack.kilometers}</Text>
-            <Text style={styles.statLabel}>Km</Text>
           </View>
           <View style={styles.statDivider} />
           <View style={styles.statItem}>
@@ -289,10 +287,19 @@ export default function TourPackDetailScreen() {
           <Text style={styles.bottomPriceLabel}>Total Price</Text>
           <Text style={styles.bottomPrice}>Rs.{tourPack.price} <Text style={styles.perPerson}>/ person</Text></Text>
         </View>
-        <TouchableOpacity style={styles.bookBtn} activeOpacity={0.85}>
-          <Text style={styles.bookBtnText}>Book Now</Text>
+        <TouchableOpacity
+          style={styles.bookBtn}
+          activeOpacity={0.85}
+          onPress={() => router.push({
+            pathname: '/transport-selection',
+            params: { tourPackId: currentTourPackId }
+          })}
+        >
+          <Text style={styles.bookBtnText}>Next</Text>
         </TouchableOpacity>
       </View>
+
+
 
       <Modal
         visible={isGalleryViewerVisible}
@@ -595,4 +602,90 @@ const styles = StyleSheet.create({
   viewerCounterText: { color: '#fff', fontWeight: '700', fontSize: 13 },
   viewerSlide: { width, flex: 1, justifyContent: 'center', alignItems: 'center' },
   viewerImage: { width: '100%', height: '100%' },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  bookingModalContainer: {
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    height: '80%',
+    padding: 24,
+  },
+  bookingModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  bookingModalTitle: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: '#1A1A2E',
+  },
+  closeModalText: {
+    color: '#FF3B30',
+    fontWeight: '700',
+  },
+  bookingFormScroll: {
+    flex: 1,
+  },
+  inputLabel: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#4B5563',
+    marginBottom: 8,
+  },
+  modalInput: {
+    backgroundColor: '#F3F4F6',
+    borderRadius: 12,
+    padding: 14,
+    fontSize: 16,
+    color: '#1F2937',
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  partyRow: {
+    flexDirection: 'row',
+  },
+  priceSummary: {
+    backgroundColor: '#EFF6FF',
+    padding: 16,
+    borderRadius: 16,
+    marginBottom: 24,
+    alignItems: 'center',
+  },
+  priceSummaryLabel: {
+    fontSize: 12,
+    color: '#1E40AF',
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  priceSummaryValue: {
+    fontSize: 24,
+    fontWeight: '800',
+    color: '#1E40AF',
+    marginTop: 4,
+  },
+  confirmBookingBtn: {
+    backgroundColor: '#003580',
+    borderRadius: 16,
+    paddingVertical: 18,
+    alignItems: 'center',
+    shadowColor: '#003580',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
+    marginBottom: 40,
+  },
+  confirmBookingBtnText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '800',
+  },
 });

@@ -19,9 +19,10 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { Image } from 'expo-image';
+import { API_BASE } from '../src/config';
 
 // Configuration for API URL
-const API_URL = Platform.OS === 'android' ? 'http://10.0.2.2:5000' : 'http://localhost:5000';
+const API_URL = `${API_BASE}/api/hotels`;
 
 const ACCOMMODATION_TYPES = [
   'Hotel',
@@ -93,7 +94,7 @@ export default function AddHotelScreen() {
     try {
       const amenitiesArray = amenities ? amenities.split(',').map(item => item.trim()) : [];
 
-      const response = await fetch(`${API_URL}/api/hotels`, {
+      const response = await fetch(API_URL, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

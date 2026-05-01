@@ -19,10 +19,9 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { Image } from 'expo-image';
+import { API_BASE } from '../src/config';
 
-// Configuration for API URL
-// Use your machine's local IP (e.g., http://192.168.1.5:5000) if testing on a real device
-const API_URL = Platform.OS === 'android' ? 'http://10.0.2.2:5000' : 'http://localhost:5000';
+const API_URL = `${API_BASE}/api/transportation`;
 
 const VEHICLE_TYPES = [
   'Car',
@@ -82,7 +81,7 @@ export default function AddTransportationScreen() {
 
     setLoading(true);
     try {
-      const response = await fetch(`${API_URL}/api/transportation`, {
+      const response = await fetch(API_URL, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TextInput,
   TouchableOpacity, ActivityIndicator, Alert,
-  Modal
+  Modal, Platform
 } from 'react-native';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
@@ -22,7 +22,7 @@ export default function AdminCreateTourPackScreen() {
   const [form, setForm] = useState({
     name: '', description: '', price: '',
     duration: '', maxGroupSize: '', destination: '',
-    kilometers: '', inclusions: '', availabilityDates: [] as string[],
+    inclusions: '', availabilityDates: [] as string[],
     category: '', tags: '', featured: false, difficulty: 'moderate',
   });
   const [errors, setErrors] = useState<any>({});
@@ -131,13 +131,28 @@ export default function AdminCreateTourPackScreen() {
     if (!validate()) return;
     setLoading(true);
     try {
-      // Use FormData to send image + text together
+      console.log('--- Submission Started ---');
+      const authHeaders = await getAuthHeaders();
+      console.log('Auth Headers retrieved:', authHeaders.Authorization ? 'YES (Token Present)' : 'NO (Token Missing)');
+
+      if (!authHeaders.Authorization) {
+        Alert.alert('Session expired', 'Please sign in again as admin.');
+        router.replace('/login');
+        return;
+      }
+
+      // Create FormData
       const formData = new FormData();
+      
+      // Helper function to fetch blob from URI (crucial for Web)
+      const getBlobFromUri = async (uri: string) => {
+        const response = await fetch(uri);
+        return await response.blob();
+      };
       formData.append('name', form.name);
       formData.append('description', form.description);
       formData.append('price', form.price);
       formData.append('duration', form.duration);
-      formData.append('kilometers', form.kilometers || '0');
       formData.append('maxGroupSize', form.maxGroupSize || '10');
       formData.append('destination', form.destination);
       formData.append('category', form.category);
@@ -157,14 +172,19 @@ export default function AdminCreateTourPackScreen() {
 
       // Attach featured image if selected
       if (image) {
-        const filename = image.uri.split('/').pop();
-        const match = /\.(\w+)$/.exec(filename ?? '');
-        const type = match ? `image/${match[1]}` : 'image/jpeg';
-        formData.append('image', {
-          uri: image.uri,
-          name: filename,
-          type,
-        } as any);
+        if (Platform.OS === 'web') {
+          const blob = await getBlobFromUri(image.uri);
+          formData.append('image', blob, image.fileName || 'featured-image.jpg');
+        } else {
+          const filename = image.uri.split('/').pop();
+          const match = /\.(\w+)$/.exec(filename ?? '');
+          const type = match ? `image/${match[1]}` : 'image/jpeg';
+          formData.append('image', {
+            uri: image.uri,
+            name: filename,
+            type,
+          } as any);
+        }
       }
 
       // Attach gallery images if selected (only new local files)
@@ -176,11 +196,16 @@ export default function AdminCreateTourPackScreen() {
             const filename = img.uri?.split('/').pop() || `img-${i}.jpg`;
             // Only add if it looks like an image
             if (filename.match(/\.(jpg|jpeg|png|gif|webp)$/i)) {
-              formData.append('gallery', {
-                uri: img.uri,
-                name: filename,
-                type: 'image/jpeg',
-              } as any);
+              if (Platform.OS === 'web') {
+                const blob = await getBlobFromUri(img.uri);
+                formData.append('gallery', blob, filename);
+              } else {
+                formData.append('gallery', {
+                  uri: img.uri,
+                  name: filename,
+                  type: 'image/jpeg',
+                } as any);
+              }
               galleryAdded = true;
             }
           } catch (e) {
@@ -190,13 +215,7 @@ export default function AdminCreateTourPackScreen() {
         console.log('Gallery files added:', galleryAdded);
       }
 
-      const authHeaders = await getAuthHeaders();
-      if (!authHeaders.Authorization) {
-        Alert.alert('Session expired', 'Please sign in again as admin.');
-        router.replace('/login');
-        return;
-      }
-
+      console.log('Sending request to:', `${API_BASE}/api/tourpacks`);
       const response = await fetch(`${API_BASE}/api/tourpacks`, {
         method: 'POST',
         headers: authHeaders,
@@ -212,6 +231,12 @@ export default function AdminCreateTourPackScreen() {
         Alert.alert('Success! 🎉', 'Tour package created!', [
           { text: 'View All', onPress: () => router.replace(adminTourPacksListRoute) },
         ]);
+
+        if (Platform.OS === 'web') {
+          setTimeout(() => {
+            router.replace(adminTourPacksListRoute);
+          }, 1500);
+        }
       } else {
         Alert.alert('Error', data.message || 'Something went wrong');
       }
@@ -370,30 +395,17 @@ export default function AdminCreateTourPackScreen() {
             </View>
           </View>
 
-          {/* Kilometers & Max Group Size Row */}
-          <View style={styles.row}>
-            <View style={[styles.field, { flex: 1, marginRight: 10 }]}>
-              <Text style={styles.label}>Kilometers (Distance)</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="e.g. 150"
-                placeholderTextColor="#BBB"
-                value={form.kilometers}
-                onChangeText={v => update('kilometers', v)}
-                keyboardType="numeric"
-              />
-            </View>
-            <View style={[styles.field, { flex: 1 }]}>
-              <Text style={styles.label}>Max Group Size</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="e.g. 10 (default)"
-                placeholderTextColor="#BBB"
-                value={form.maxGroupSize}
-                onChangeText={v => update('maxGroupSize', v)}
-                keyboardType="numeric"
-              />
-            </View>
+          {/* Max Group Size */}
+          <View style={styles.field}>
+            <Text style={styles.label}>Max Group Size</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="e.g. 10 (default)"
+              placeholderTextColor="#BBB"
+              value={form.maxGroupSize}
+              onChangeText={v => update('maxGroupSize', v)}
+              keyboardType="numeric"
+            />
           </View>
 
           {/* Inclusions */}
@@ -581,6 +593,9 @@ const styles = StyleSheet.create({
     borderColor: '#DCE4F3',
     shadowColor: '#000', shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.08, shadowRadius: 12, elevation: 4,
+    alignSelf: 'center',
+    width: '92%',
+    maxWidth: 600,
   },
 
   // Image Picker

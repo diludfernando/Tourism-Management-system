@@ -7,7 +7,6 @@ const tourPackSchema = new mongoose.Schema({
   duration: { type: Number, required: [true, 'Duration is required'] },
   maxGroupSize: { type: Number, default: 10 },
   destination: { type: String, required: [true, 'Destination is required'] },
-  kilometers: { type: Number, default: 0 },
   inclusions: { type: [String], default: [] },
   image: { type: String, default: '' },
   gallery: [{

@@ -20,7 +20,6 @@ type TourPack = {
   duration: number;
   destination: string;
   maxGroupSize: number;
-  kilometers: number;
   image: string;
   gallery?: { url: string; caption: string; isFeatured: boolean }[];
   inclusions: string[];
@@ -165,9 +164,6 @@ export default function TourPackList() {
         </View>
         <View style={styles.groupPill}>
           <Text style={styles.groupText}>👥 {item.maxGroupSize}</Text>
-        </View>
-        <View style={styles.groupPill}>
-          <Text style={styles.groupText}>📍 {item.kilometers}km</Text>
         </View>
       </View>
 

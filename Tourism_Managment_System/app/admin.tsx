@@ -2,8 +2,9 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { StyleSheet, View, Text, TouchableOpacity, ScrollView, SafeAreaView, Platform } from 'react-native';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { API_BASE } from '../src/config';
 
-const API_URL = Platform.OS === 'android' ? 'http://10.0.2.2:5000' : 'http://localhost:5000';
+const API_URL = `${API_BASE}/api/bookings`;
 const formatPrice = (value: number) =>
   `LKR ${Number(value || 0).toLocaleString(undefined, {
     minimumFractionDigits: 2,
@@ -26,7 +27,7 @@ export default function AdminScreen() {
     useCallback(() => {
       const loadBookings = async () => {
         try {
-          const response = await fetch(`${API_URL}/api/bookings`);
+          const response = await fetch(API_URL);
           const data = await response.json();
           if (response.ok) {
             setBookings(data);

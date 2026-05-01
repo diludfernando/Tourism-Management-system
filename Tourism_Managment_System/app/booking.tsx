@@ -16,8 +16,9 @@ import {
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { API_BASE } from '../src/config';
 
-const API_URL = Platform.OS === 'android' ? 'http://10.0.2.2:5000' : 'http://localhost:5000';
+const API_URL = API_BASE;
 const TRAVEL_STYLES = ['Relax', 'Adventure', 'Family', 'Luxury', 'Work'] as const;
 const WEEKDAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'] as const;
 const ROOM_ADULT_CAPACITY = 2;
@@ -50,25 +51,7 @@ type Transportation = {
   price: number;
 };
 
-type ReceiptData = {
-  bookingReference: string;
-  issuedAt: string;
-  guestName: string;
-  hotelName: string;
-  destination: string;
-  checkInDate: string;
-  checkOutDate: string;
-  adults: number;
-  children: number;
-  rooms: number;
-  nights: number;
-  transferLabel: string;
-  stayAmount: number;
-  transportAmount: number;
-  serviceFee: number;
-  totalAmount: number;
-  paymentStatus: string;
-};
+
 
 const formatDateForApi = (date: Date) => {
   const year = date.getFullYear();
@@ -141,8 +124,13 @@ const getCalendarDays = (monthDate: Date) => {
 
 export default function BookingScreen() {
   const router = useRouter();
-  const { hotelId, transportId } = useLocalSearchParams<{ hotelId?: string; transportId?: string }>();
+  const { hotelId, tourPackId, transportId } = useLocalSearchParams<{ 
+    hotelId?: string; 
+    tourPackId?: string; 
+    transportId?: string 
+  }>();
   const [hotel, setHotel] = useState<Hotel | null>(null);
+  const [tourPack, setTourPack] = useState<any | null>(null);
   const [vehicles, setVehicles] = useState<Transportation[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -152,12 +140,12 @@ export default function BookingScreen() {
     title: string;
     message: string;
   } | null>(null);
-  const [receiptData, setReceiptData] = useState<ReceiptData | null>(null);
   const [selectedTransport, setSelectedTransport] = useState(transportId ?? '');
   const [activeDateField, setActiveDateField] = useState<DateField | null>(null);
   const [calendarMonth, setCalendarMonth] = useState(() => startOfDay(new Date()));
   const today = useMemo(() => startOfDay(new Date()), []);
-  const [formData, setFormData] = useState({
+
+   const [formData, setFormData] = useState({
     guestName: '',
     email: '',
     phone: '',
@@ -171,6 +159,11 @@ export default function BookingScreen() {
   });
 
   const handleBack = useCallback(() => {
+    if (tourPackId) {
+      router.push(`/my-tourpacks/${tourPackId}`);
+      return;
+    }
+
     if (!hotelId) {
       router.push({
         pathname: '/hotels',
@@ -186,43 +179,49 @@ export default function BookingScreen() {
         ...(transportId ? { transportId } : {}),
       },
     });
-  }, [hotelId, router, transportId]);
+  }, [hotelId, tourPackId, router, transportId]);
 
   const fetchBookingSetup = useCallback(async () => {
     try {
-      const [hotelResponse, vehiclesResponse] = await Promise.all([
-        fetch(`${API_URL}/api/hotels/${hotelId}`),
-        fetch(`${API_URL}/api/transportation`),
-      ]);
+      const fetchTasks = [fetch(`${API_URL}/api/transportation`)];
+      if (hotelId) fetchTasks.push(fetch(`${API_URL}/api/hotels/${hotelId}`));
+      if (tourPackId) fetchTasks.push(fetch(`${API_URL}/api/tourpacks/${tourPackId}`));
 
-      const hotelData = await hotelResponse.json();
-      const vehiclesData = await vehiclesResponse.json();
+      const responses = await Promise.all(fetchTasks);
+      const vehiclesData = await responses[0].json();
+      setVehicles(Array.isArray(vehiclesData) ? vehiclesData : []);
 
-      if (!hotelResponse.ok) {
-        Alert.alert('Error', hotelData.message || 'Failed to load hotel');
-        handleBack();
-        return;
+      let responseIdx = 1;
+      if (hotelId) {
+        const hotelResponse = responses[responseIdx++];
+        const hotelData = await hotelResponse.json();
+        if (hotelResponse.ok) {
+          setHotel(hotelData);
+          setFormData((prev) => ({ ...prev, destination: hotelData.location || prev.destination }));
+        }
       }
 
-      setHotel(hotelData);
-      setVehicles(Array.isArray(vehiclesData) ? vehiclesData : []);
-      setFormData((prev) => ({
-        ...prev,
-        destination: hotelData.location || '',
-      }));
+      if (tourPackId) {
+        const tourResponse = responses[responseIdx++];
+        const tourData = await tourResponse.json();
+        if (tourResponse.ok) {
+          setTourPack(tourData);
+          setFormData((prev) => ({ ...prev, destination: tourData.destination || prev.destination }));
+        }
+      }
     } catch {
       Alert.alert('Connection Error', 'Could not load booking setup.');
       handleBack();
     } finally {
       setLoading(false);
     }
-  }, [handleBack, hotelId]);
+  }, [handleBack, hotelId, tourPackId]);
 
   useEffect(() => {
-    if (hotelId) {
+    if (hotelId || tourPackId) {
       fetchBookingSetup();
     }
-  }, [hotelId, fetchBookingSetup]);
+  }, [hotelId, tourPackId, fetchBookingSetup]);
 
   useEffect(() => {
     setSelectedTransport(transportId ?? '');
@@ -233,7 +232,7 @@ export default function BookingScreen() {
   const selectedVehicle = vehicles.find((vehicle) => vehicle._id === selectedTransport);
 
   const bookingPreview = useMemo(() => {
-    if (!hotel) {
+    if (!hotel && !tourPack) {
       return {
         adults: 0,
         children: 0,
@@ -241,6 +240,7 @@ export default function BookingScreen() {
         rooms: 0,
         nights: 0,
         stayAmount: 0,
+        packageAmount: 0,
         transportAmount: 0,
         serviceFee: 0,
         total: 0,
@@ -249,16 +249,19 @@ export default function BookingScreen() {
 
     const start = parseDateString(formData.checkInDate);
     const end = parseDateString(formData.checkOutDate);
-    const rawNights =
-      start && end ? Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) : 0;
+    const rawNights = start && end ? Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) : 0;
     const nights = Number.isFinite(rawNights) && rawNights > 0 ? rawNights : 0;
+    
     const adults = Math.max(Number(formData.adults) || 0, 0);
     const children = Math.max(Number(formData.children) || 0, 0);
     const guests = adults + children;
-    const rooms = adults > 0 ? Math.max(Math.ceil(adults / ROOM_ADULT_CAPACITY), Math.ceil(children / ROOM_CHILD_CAPACITY), 1) : 0;
-    const stayAmount = nights * rooms * hotel.pricePerNight;
+    const rooms = hotel ? (adults > 0 ? Math.max(Math.ceil(adults / ROOM_ADULT_CAPACITY), Math.ceil(children / ROOM_CHILD_CAPACITY), 1) : 0) : 0;
+    
+    const stayAmount = hotel ? nights * rooms * hotel.pricePerNight : 0;
+    const packageAmount = tourPack ? tourPack.price * guests : 0;
     const transportAmount = selectedVehicle?.price || 0;
-    const serviceFee = Math.round(stayAmount * 0.08);
+    const serviceFee = Math.round((stayAmount + packageAmount) * 0.08);
+    const total = stayAmount + packageAmount + transportAmount + serviceFee;
 
     return {
       adults,
@@ -267,11 +270,12 @@ export default function BookingScreen() {
       rooms,
       nights,
       stayAmount,
+      packageAmount,
       transportAmount,
       serviceFee,
-      total: stayAmount + transportAmount + serviceFee,
+      total,
     };
-  }, [formData.adults, formData.checkInDate, formData.checkOutDate, formData.children, hotel, selectedVehicle]);
+  }, [formData.adults, formData.checkInDate, formData.checkOutDate, formData.children, hotel, tourPack, selectedVehicle]);
 
   const updateField = (field: string, value: string) => {
     setSubmitMessage(null);
@@ -348,8 +352,8 @@ export default function BookingScreen() {
     Keyboard.dismiss();
     setSubmitMessage(null);
 
-    if (!hotel) {
-      showFeedback('error', 'Booking Unavailable', 'Hotel details are still loading. Please try again.');
+    if (!hotel && !tourPack) {
+      showFeedback('error', 'Booking Unavailable', 'Details are still loading. Please try again.');
       return;
     }
 
@@ -360,25 +364,27 @@ export default function BookingScreen() {
     const adults = Number.parseInt(formData.adults, 10);
     const children = Number.parseInt(formData.children, 10);
     const guests = bookingPreview.guests;
-    const rooms = bookingPreview.rooms;
 
     const requiredFields = [
       guestName,
       email,
       phone,
       destination,
-      formData.checkInDate.trim(),
-      formData.checkOutDate.trim(),
       formData.adults.trim(),
       formData.children.trim(),
     ];
 
-    if (requiredFields.some((value) => !value.trim())) {
+    if (hotel) {
+      requiredFields.push(formData.checkInDate.trim());
+      requiredFields.push(formData.checkOutDate.trim());
+    }
+
+    if (requiredFields.some((value) => !value)) {
       showFeedback('error', 'Missing Information', 'Fill in all required booking details.');
       return;
     }
 
-    if (bookingPreview.nights < 1) {
+    if (hotel && bookingPreview.nights < 1) {
       showFeedback('error', 'Invalid Dates', 'Check-out date must be after check-in date.');
       return;
     }
@@ -403,19 +409,20 @@ export default function BookingScreen() {
       return;
     }
 
-    if (rooms < 1) {
-      showFeedback('error', 'Invalid Stay Details', 'Could not calculate a valid room count for this booking.');
-      return;
-    }
-
-    if (hotel.availableRooms < 1) {
-      showFeedback('error', 'Availability Issue', 'This hotel currently has no rooms available.');
-      return;
-    }
-
-    if (rooms > hotel.availableRooms) {
-      showFeedback('error', 'Availability Issue', 'Requested rooms exceed current availability.');
-      return;
+    if (hotel) {
+      const rooms = bookingPreview.rooms;
+      if (rooms < 1) {
+        showFeedback('error', 'Invalid Stay Details', 'Could not calculate a valid room count.');
+        return;
+      }
+      if (hotel.availableRooms < 1) {
+        showFeedback('error', 'Availability Issue', 'This hotel currently has no rooms available.');
+        return;
+      }
+      if (rooms > hotel.availableRooms) {
+        showFeedback('error', 'Availability Issue', 'Requested rooms exceed current availability.');
+        return;
+      }
     }
 
     if (selectedVehicle && guests > selectedVehicle.capacity) {
@@ -425,25 +432,18 @@ export default function BookingScreen() {
 
     setSaving(true);
     try {
-      const response = await fetch(`${API_URL}/api/bookings`, {
+      const response = await fetch(`${API_BASE}/api/bookings`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...formData,
-          guestName,
-          email,
-          phone,
-          destination,
-          hotel: hotel._id,
+          hotel: hotelId || null,
+          tourPack: tourPackId || null,
           transportation: selectedTransport || null,
-          adults,
-          children,
-          guests,
-          rooms,
           itineraryNotes: [
-            `${formData.travelStyle} trip`,
-            `${adults} adult(s) and ${children} child(ren)`,
-            `${rooms} room(s) required`,
+            hotelId
+              ? `Stay at ${hotel.name} for ${bookingPreview.nights} nights`
+              : `Tour Package: ${tourPack?.name}`,
             selectedVehicle
               ? `Transfer via ${selectedVehicle.brandModel || selectedVehicle.vehicleType}`
               : 'No transfer selected',
@@ -452,49 +452,14 @@ export default function BookingScreen() {
       });
 
       const data = await response.json();
-      if (!response.ok) {
+      if (response.ok) {
+        router.push({
+          pathname: '/receipt',
+          params: { bookingId: data._id },
+        });
+      } else {
         showFeedback('error', 'Booking Failed', data.message || 'Could not create booking.');
-        return;
       }
-
-      const nextReceipt: ReceiptData = {
-        bookingReference: data.bookingReference || 'Pending',
-        issuedAt: data.createdAt || new Date().toISOString(),
-        guestName,
-        hotelName: hotel.name,
-        destination,
-        checkInDate: formData.checkInDate,
-        checkOutDate: formData.checkOutDate,
-        adults,
-        children,
-        rooms,
-        nights: bookingPreview.nights,
-        transferLabel: selectedVehicle ? selectedVehicle.brandModel || selectedVehicle.vehicleType : 'No transfer selected',
-        stayAmount: bookingPreview.stayAmount,
-        transportAmount: bookingPreview.transportAmount,
-        serviceFee: bookingPreview.serviceFee,
-        totalAmount: data.totalAmount || bookingPreview.total,
-        paymentStatus: data.paymentStatus || 'deposit_due',
-      };
-
-      setFormData({
-        guestName: '',
-        email: '',
-        phone: '',
-        destination: hotel.location || '',
-        checkInDate: '',
-        checkOutDate: '',
-        adults: DEFAULT_ADULTS,
-        children: DEFAULT_CHILDREN,
-        travelStyle: 'Relax',
-        specialRequests: '',
-      });
-      setSelectedTransport(transportId ?? '');
-      setSubmitMessage({
-        type: 'success',
-        text: `Booking confirmed. Reference ${nextReceipt.bookingReference} | Total ${formatPrice(nextReceipt.totalAmount)}`,
-      });
-      setReceiptData(nextReceipt);
     } catch {
       showFeedback('error', 'Connection Error', 'Could not connect to the booking service.');
     } finally {
@@ -530,16 +495,28 @@ export default function BookingScreen() {
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
           <View style={styles.heroCard}>
             <Text style={styles.heroEyebrow}>Signature Stay</Text>
-            <Text style={styles.heroTitle}>{hotel.name}</Text>
-            <Text style={styles.heroMeta}>{hotel.location} | {hotel.accommodationType}</Text>
+            <Text style={styles.heroTitle}>{hotel ? hotel.name : tourPack?.name}</Text>
+            <Text style={styles.heroMeta}>
+              {hotel 
+                ? `${hotel.location} | ${hotel.accommodationType}` 
+                : `${tourPack?.destination} | Tour Package`}
+            </Text>
             <View style={styles.heroStats}>
               <View style={styles.heroStat}>
-                <Text style={styles.heroStatValue}>{formatPrice(hotel.pricePerNight)}</Text>
-                <Text style={styles.heroStatLabel}>per night</Text>
+                <Text style={styles.heroStatValue}>
+                  {hotel ? formatPrice(hotel.pricePerNight) : formatPrice(tourPack?.price || 0)}
+                </Text>
+                <Text style={styles.heroStatLabel}>
+                  {hotel ? 'per night' : 'per person'}
+                </Text>
               </View>
               <View style={styles.heroStat}>
-                <Text style={styles.heroStatValue}>{hotel.availableRooms}</Text>
-                <Text style={styles.heroStatLabel}>rooms left</Text>
+                <Text style={styles.heroStatValue}>
+                  {hotel ? hotel.availableRooms : tourPack?.duration || 'N/A'}
+                </Text>
+                <Text style={styles.heroStatLabel}>
+                  {hotel ? 'rooms left' : 'duration'}
+                </Text>
               </View>
             </View>
           </View>
@@ -596,31 +573,35 @@ export default function BookingScreen() {
               onChangeText={(text) => updateField('destination', text)}
             />
 
-            <Text style={styles.subLabel}>Stay dates</Text>
-            <View style={styles.row}>
-              <TouchableOpacity style={[styles.dateField, styles.halfInput]} onPress={() => openDatePicker('checkInDate')}>
-                <View>
-                  <Text style={styles.dateFieldLabel}>Check-in</Text>
-                  <Text style={[styles.dateFieldValue, !formData.checkInDate && styles.dateFieldPlaceholder]}>
-                    {formatDateForDisplay(formData.checkInDate)}
-                  </Text>
-                </View>
-                <Ionicons name="calendar-outline" size={20} color="#003580" />
-              </TouchableOpacity>
+            {hotel && (
+              <>
+                <Text style={styles.subLabel}>Stay dates</Text>
+                <View style={styles.row}>
+                  <TouchableOpacity style={[styles.dateField, styles.halfInput]} onPress={() => openDatePicker('checkInDate')}>
+                    <View>
+                      <Text style={styles.dateFieldLabel}>Check-in</Text>
+                      <Text style={[styles.dateFieldValue, !formData.checkInDate && styles.dateFieldPlaceholder]}>
+                        {formatDateForDisplay(formData.checkInDate)}
+                      </Text>
+                    </View>
+                    <Ionicons name="calendar-outline" size={20} color="#003580" />
+                  </TouchableOpacity>
 
-              <TouchableOpacity
-                style={[styles.dateField, styles.halfInput]}
-                onPress={() => openDatePicker('checkOutDate')}
-              >
-                <View>
-                  <Text style={styles.dateFieldLabel}>Check-out</Text>
-                  <Text style={[styles.dateFieldValue, !formData.checkOutDate && styles.dateFieldPlaceholder]}>
-                    {formatDateForDisplay(formData.checkOutDate)}
-                  </Text>
+                  <TouchableOpacity
+                    style={[styles.dateField, styles.halfInput]}
+                    onPress={() => openDatePicker('checkOutDate')}
+                  >
+                    <View>
+                      <Text style={styles.dateFieldLabel}>Check-out</Text>
+                      <Text style={[styles.dateFieldValue, !formData.checkOutDate && styles.dateFieldPlaceholder]}>
+                        {formatDateForDisplay(formData.checkOutDate)}
+                      </Text>
+                    </View>
+                    <Ionicons name="calendar-outline" size={20} color="#003580" />
+                  </TouchableOpacity>
                 </View>
-                <Ionicons name="calendar-outline" size={20} color="#003580" />
-              </TouchableOpacity>
-            </View>
+              </>
+            )}
 
             <Text style={styles.subLabel}>Guests</Text>
             <View style={styles.row}>
@@ -727,26 +708,44 @@ export default function BookingScreen() {
           <View style={styles.summaryCard}>
             <Text style={styles.sectionTitle}>Booking Summary</Text>
             <Text style={styles.summaryHint}>
-              {bookingPreview.nights > 0
-                ? `${bookingPreview.adults} adult(s), ${bookingPreview.children} child(ren), ${bookingPreview.rooms} room(s)`
-                : `Select check-in and check-out to calculate the total`}
+              {hotel && tourPack 
+                ? (bookingPreview.nights > 0 
+                  ? `${bookingPreview.adults} adult(s), ${bookingPreview.children} child(ren), ${bookingPreview.rooms} room(s) + ${tourPack.name}`
+                  : `Select dates for ${hotel.name} | ${tourPack.name} included`)
+                : hotel 
+                  ? (bookingPreview.nights > 0
+                    ? `${bookingPreview.adults} adult(s), ${bookingPreview.children} child(ren), ${bookingPreview.rooms} room(s)`
+                    : 'Select check-in and check-out to calculate the total')
+                  : tourPack
+                    ? `${tourPack.name} for ${bookingPreview.adults} adult(s), ${bookingPreview.children} child(ren)`
+                    : 'Select your trip details'}
             </Text>
             <View style={styles.summaryRow}>
               <Text style={styles.summaryLabel}>Party size</Text>
               <Text style={styles.summaryValue}>{bookingPreview.guests} guest(s)</Text>
             </View>
-            <View style={styles.summaryRow}>
-              <Text style={styles.summaryLabel}>Rooms required</Text>
-              <Text style={styles.summaryValue}>{bookingPreview.rooms}</Text>
-            </View>
-            <View style={styles.summaryRow}>
-              <Text style={styles.summaryLabel}>Nights</Text>
-              <Text style={styles.summaryValue}>{bookingPreview.nights}</Text>
-            </View>
-            <View style={styles.summaryRow}>
-              <Text style={styles.summaryLabel}>Stay</Text>
-              <Text style={styles.summaryValue}>{formatPrice(bookingPreview.stayAmount)}</Text>
-            </View>
+            {hotel && (
+              <>
+                <View style={styles.summaryRow}>
+                  <Text style={styles.summaryLabel}>Rooms required</Text>
+                  <Text style={styles.summaryValue}>{bookingPreview.rooms}</Text>
+                </View>
+                <View style={styles.summaryRow}>
+                  <Text style={styles.summaryLabel}>Nights</Text>
+                  <Text style={styles.summaryValue}>{bookingPreview.nights}</Text>
+                </View>
+                <View style={styles.summaryRow}>
+                  <Text style={styles.summaryLabel}>Stay</Text>
+                  <Text style={styles.summaryValue}>{formatPrice(bookingPreview.stayAmount)}</Text>
+                </View>
+              </>
+            )}
+            {tourPack && (
+              <View style={styles.summaryRow}>
+                <Text style={styles.summaryLabel}>Package</Text>
+                <Text style={styles.summaryValue}>{formatPrice(bookingPreview.packageAmount)}</Text>
+              </View>
+            )}
             <View style={styles.summaryRow}>
               <Text style={styles.summaryLabel}>Transport</Text>
               <Text style={styles.summaryValue}>{formatPrice(bookingPreview.transportAmount)}</Text>
@@ -865,106 +864,7 @@ export default function BookingScreen() {
         </View>
       </Modal>
 
-      <Modal
-        visible={Boolean(receiptData)}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setReceiptData(null)}
-      >
-        <View style={styles.modalBackdrop}>
-          <View style={styles.receiptModal}>
-            <View style={styles.receiptHeader}>
-              <View style={styles.receiptBadge}>
-                <Ionicons name="receipt-outline" size={22} color="#047857" />
-              </View>
-              <Text style={styles.receiptTitle}>Booking Receipt</Text>
-              <Text style={styles.receiptSubtitle}>Your reservation was created successfully.</Text>
-            </View>
 
-            <View style={styles.receiptPanel}>
-              <View style={styles.receiptTopRow}>
-                <View>
-                  <Text style={styles.receiptRefLabel}>Reference</Text>
-                  <Text style={styles.receiptRefValue}>{receiptData?.bookingReference}</Text>
-                </View>
-                <Text style={styles.receiptDate}>
-                  {receiptData ? new Date(receiptData.issuedAt).toLocaleString('en-US') : ''}
-                </Text>
-              </View>
-
-              <View style={styles.receiptSection}>
-                <Text style={styles.receiptSectionTitle}>Guest</Text>
-                <Text style={styles.receiptPrimaryText}>{receiptData?.guestName}</Text>
-                <Text style={styles.receiptMutedText}>{hotel.name}</Text>
-                <Text style={styles.receiptMutedText}>{receiptData?.destination}</Text>
-              </View>
-
-              <View style={styles.receiptSection}>
-                <View style={styles.receiptRow}>
-                  <Text style={styles.receiptLabel}>Stay</Text>
-                  <Text style={styles.receiptValue}>
-                    {receiptData ? `${formatDateForDisplay(receiptData.checkInDate)} to ${formatDateForDisplay(receiptData.checkOutDate)}` : ''}
-                  </Text>
-                </View>
-                <View style={styles.receiptRow}>
-                  <Text style={styles.receiptLabel}>Party</Text>
-                  <Text style={styles.receiptValue}>
-                    {receiptData ? `${receiptData.adults} adult(s), ${receiptData.children} child(ren)` : ''}
-                  </Text>
-                </View>
-                <View style={styles.receiptRow}>
-                  <Text style={styles.receiptLabel}>Rooms</Text>
-                  <Text style={styles.receiptValue}>{receiptData?.rooms}</Text>
-                </View>
-                <View style={styles.receiptRow}>
-                  <Text style={styles.receiptLabel}>Nights</Text>
-                  <Text style={styles.receiptValue}>{receiptData?.nights}</Text>
-                </View>
-                <View style={styles.receiptRow}>
-                  <Text style={styles.receiptLabel}>Transfer</Text>
-                  <Text style={styles.receiptValue}>{receiptData?.transferLabel}</Text>
-                </View>
-                <View style={styles.receiptRow}>
-                  <Text style={styles.receiptLabel}>Payment</Text>
-                  <Text style={styles.receiptValue}>
-                    {receiptData?.paymentStatus === 'paid'
-                      ? 'Paid'
-                      : receiptData?.paymentStatus === 'refunded'
-                        ? 'Refunded'
-                        : 'Deposit Due'}
-                  </Text>
-                </View>
-              </View>
-
-              <View style={styles.receiptSection}>
-                <View style={styles.receiptRow}>
-                  <Text style={styles.receiptLabel}>Stay total</Text>
-                  <Text style={styles.receiptValue}>{formatPrice(receiptData?.stayAmount || 0)}</Text>
-                </View>
-                <View style={styles.receiptRow}>
-                  <Text style={styles.receiptLabel}>Transport</Text>
-                  <Text style={styles.receiptValue}>{formatPrice(receiptData?.transportAmount || 0)}</Text>
-                </View>
-                <View style={styles.receiptRow}>
-                  <Text style={styles.receiptLabel}>Service fee</Text>
-                  <Text style={styles.receiptValue}>{formatPrice(receiptData?.serviceFee || 0)}</Text>
-                </View>
-                <View style={[styles.receiptRow, styles.receiptTotalRow]}>
-                  <Text style={styles.receiptTotalLabel}>Total</Text>
-                  <Text style={styles.receiptTotalValue}>{formatPrice(receiptData?.totalAmount || 0)}</Text>
-                </View>
-              </View>
-            </View>
-
-            <TouchableOpacity
-              style={[styles.feedbackButton, styles.feedbackButtonSuccess]}
-              onPress={() => setReceiptData(null)}
-            >
-              <Text style={styles.feedbackButtonText}>Close Receipt</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
 
       <Modal
         visible={Boolean(feedbackModal)}
@@ -1279,121 +1179,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
   },
-  receiptModal: {
-    backgroundColor: '#FFF',
-    borderRadius: 24,
-    padding: 22,
-    gap: 18,
-  },
-  receiptHeader: {
-    alignItems: 'center',
-    gap: 8,
-  },
-  receiptBadge: {
-    width: 54,
-    height: 54,
-    borderRadius: 27,
-    backgroundColor: '#D1FAE5',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  receiptTitle: {
-    fontSize: 22,
-    fontWeight: '800',
-    color: '#0F172A',
-  },
-  receiptSubtitle: {
-    fontSize: 14,
-    color: '#64748B',
-    textAlign: 'center',
-  },
-  receiptPanel: {
-    borderRadius: 20,
-    backgroundColor: '#F8FAFC',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    padding: 16,
-    gap: 16,
-  },
-  receiptTopRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    gap: 12,
-  },
-  receiptRefLabel: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#64748B',
-    textTransform: 'uppercase',
-    marginBottom: 4,
-  },
-  receiptRefValue: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: '#003580',
-  },
-  receiptDate: {
-    flex: 1,
-    textAlign: 'right',
-    fontSize: 12,
-    color: '#64748B',
-  },
-  receiptSection: {
-    gap: 8,
-    paddingTop: 14,
-    borderTopWidth: 1,
-    borderTopColor: '#E2E8F0',
-  },
-  receiptSectionTitle: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#64748B',
-    textTransform: 'uppercase',
-  },
-  receiptPrimaryText: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#0F172A',
-  },
-  receiptMutedText: {
-    fontSize: 14,
-    color: '#475569',
-  },
-  receiptRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    gap: 12,
-  },
-  receiptLabel: {
-    flex: 1,
-    fontSize: 14,
-    color: '#64748B',
-  },
-  receiptValue: {
-    flex: 1,
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#0F172A',
-    textAlign: 'right',
-  },
-  receiptTotalRow: {
-    marginTop: 6,
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: '#CBD5E1',
-  },
-  receiptTotalLabel: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#0F172A',
-  },
-  receiptTotalValue: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: '#003580',
-  },
+
   calendarHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',

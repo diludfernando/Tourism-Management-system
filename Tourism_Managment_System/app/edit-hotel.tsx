@@ -19,8 +19,9 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { Image } from 'expo-image';
+import { API_BASE } from '../src/config';
 
-const API_URL = Platform.OS === 'android' ? 'http://10.0.2.2:5000' : 'http://localhost:5000';
+const API_URL = `${API_BASE}/api/hotels`;
 
 const ACCOMMODATION_TYPES = [
   'Hotel',
@@ -66,7 +67,7 @@ export default function EditHotelScreen() {
 
   const fetchHotelDetails = async () => {
     try {
-      const response = await fetch(`${API_URL}/api/hotels/${id}`);
+      const response = await fetch(`${API_URL}/${id}`);
       const data = await response.json();
       if (response.ok) {
         setFormData({
@@ -129,7 +130,7 @@ export default function EditHotelScreen() {
     try {
       const amenitiesArray = amenities ? amenities.split(',').map(item => item.trim()).filter(i => i) : [];
 
-      const response = await fetch(`${API_URL}/api/hotels/${id}`, {
+      const response = await fetch(`${API_URL}/${id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

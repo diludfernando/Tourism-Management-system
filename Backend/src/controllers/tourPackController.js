@@ -5,7 +5,23 @@ exports.createTourPack = async (req, res) => {
     console.log('Create request received');
     console.log('Files:', req.files ? req.files.length : 'none');
     
-    const tourPack = new TourPack(req.body);
+    const cleanBody = { ...req.body };
+    
+    // Map array fields from FormData
+    if (cleanBody['tags[]']) {
+      cleanBody.tags = Array.isArray(cleanBody['tags[]']) ? cleanBody['tags[]'] : [cleanBody['tags[]']];
+      delete cleanBody['tags[]'];
+    }
+    if (cleanBody['inclusions[]']) {
+      cleanBody.inclusions = Array.isArray(cleanBody['inclusions[]']) ? cleanBody['inclusions[]'] : [cleanBody['inclusions[]']];
+      delete cleanBody['inclusions[]'];
+    }
+    if (cleanBody['availabilityDates[]']) {
+      cleanBody.availabilityDates = Array.isArray(cleanBody['availabilityDates[]']) ? cleanBody['availabilityDates[]'] : [cleanBody['availabilityDates[]']];
+      delete cleanBody['availabilityDates[]'];
+    }
+
+    const tourPack = new TourPack(cleanBody);
     
     // Separate image and gallery files
     if (req.files && Array.isArray(req.files)) {
@@ -106,6 +122,20 @@ exports.updateTourPack = async (req, res) => {
     
     const updateData = { ...req.body };
     delete updateData.retainedGalleryJson;
+    
+    // Map array fields from FormData
+    if (updateData['tags[]']) {
+      updateData.tags = Array.isArray(updateData['tags[]']) ? updateData['tags[]'] : [updateData['tags[]']];
+      delete updateData['tags[]'];
+    }
+    if (updateData['inclusions[]']) {
+      updateData.inclusions = Array.isArray(updateData['inclusions[]']) ? updateData['inclusions[]'] : [updateData['inclusions[]']];
+      delete updateData['inclusions[]'];
+    }
+    if (updateData['availabilityDates[]']) {
+      updateData.availabilityDates = Array.isArray(updateData['availabilityDates[]']) ? updateData['availabilityDates[]'] : [updateData['availabilityDates[]']];
+      delete updateData['availabilityDates[]'];
+    }
     
     // Separate image and gallery files
     if (req.files && Array.isArray(req.files)) {

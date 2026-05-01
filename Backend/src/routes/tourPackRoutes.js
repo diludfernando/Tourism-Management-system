@@ -22,14 +22,20 @@ const storage = multer.diskStorage({
     cb(null, uploadDir);
   },
   filename: (req, file, cb) => {
-    cb(null, 'tourpack-' + Date.now() + path.extname(file.originalname));
+    const ext = path.extname(file.originalname) || '.jpg';
+    cb(null, 'tourpack-' + Date.now() + ext);
   }
 });
 
 const fileFilter = (req, file, cb) => {
-  const allowedTypes = /jpeg|jpg|png/;
-  const isValid = allowedTypes.test(path.extname(file.originalname).toLowerCase());
-  isValid ? cb(null, true) : cb(new Error('Only JPG and PNG allowed'), false);
+  const allowedTypes = /jpeg|jpg|png|webp|gif/;
+  const ext = path.extname(file.originalname).toLowerCase();
+  if (!ext) {
+    cb(null, true); // Allow if no extension (handled by RN)
+  } else {
+    const isValid = allowedTypes.test(ext);
+    isValid ? cb(null, true) : cb(new Error(`Only image files allowed, got ${ext}`), false);
+  }
 };
 
 const upload = multer({ storage, fileFilter, limits: { fileSize: 5 * 1024 * 1024 } });

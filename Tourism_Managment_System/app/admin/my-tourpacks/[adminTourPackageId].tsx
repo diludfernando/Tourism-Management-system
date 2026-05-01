@@ -21,7 +21,6 @@ type TourPack = {
   duration: number;
   destination: string;
   maxGroupSize: number;
-  kilometers: number;
   image: string;
   gallery: { url: string; caption?: string; isFeatured?: boolean }[];
   inclusions: string[];
@@ -194,11 +193,6 @@ export default function AdminTourPackDetailScreen() {
           <View style={styles.statItem}>
             <Text style={styles.statValue}>{tourPack.maxGroupSize}</Text>
             <Text style={styles.statLabel}>Max Group</Text>
-          </View>
-          <View style={styles.statDivider} />
-          <View style={styles.statItem}>
-            <Text style={styles.statValue}>{tourPack.kilometers}</Text>
-            <Text style={styles.statLabel}>Km</Text>
           </View>
           <View style={styles.statDivider} />
           <View style={styles.statItem}>

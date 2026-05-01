@@ -1,10 +1,12 @@
 const Booking = require('../models/Booking');
 const Hotel = require('../models/Hotel');
 const Transportation = require('../models/Transportation');
+const TourPack = require('../models/TourPack');
 
 const BOOKING_POPULATE = [
   { path: 'hotel', select: 'name location pricePerNight accommodationType image' },
   { path: 'transportation', select: 'vehicleType brandModel plateNumber price capacity' },
+  { path: 'tourPack', select: 'name destination price duration image' },
 ];
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const PHONE_REGEX = /^[0-9+\-\s()]{7,20}$/;
@@ -36,6 +38,9 @@ const syncHotelAvailabilityForStatusChange = async (booking, previousStatus, nex
     return null;
   }
 
+  if (!booking.hotel) {
+    return null;
+  }
   const hotel = await Hotel.findById(booking.hotel);
   if (!hotel) {
     return null;
@@ -67,6 +72,7 @@ const createBooking = async (req, res) => {
       phone,
       destination,
       hotel: hotelId,
+      tourPack: tourPackId,
       transportation: transportationId,
       checkInDate,
       checkOutDate,
@@ -75,6 +81,7 @@ const createBooking = async (req, res) => {
       travelStyle,
       specialRequests,
       itineraryNotes,
+      packageAmount: packageAmountFromReq,
     } = req.body;
 
     const normalizedGuestName = String(guestName || '').trim();
@@ -106,24 +113,42 @@ const createBooking = async (req, res) => {
       return res.status(400).json({ message: 'Children must be 0 or more' });
     }
 
-    const hotel = await Hotel.findById(hotelId);
-    if (!hotel) {
-      return res.status(404).json({ message: 'Selected hotel was not found' });
-    }
-
-    const nights = calculateNights(checkInDate, checkOutDate);
-    if (nights < 1) {
-      return res.status(400).json({ message: 'Check-out date must be after check-in date' });
-    }
-
-    if (parsedRooms > hotel.availableRooms) {
-      return res.status(400).json({ message: 'Requested rooms exceed hotel availability' });
-    }
-
-    let transportation = null;
+    let stayAmount = 0;
+    let packageAmount = 0;
     let transportationAmount = 0;
+
+    if (hotelId) {
+      const hotel = await Hotel.findById(hotelId);
+      if (!hotel) {
+        return res.status(404).json({ message: 'Selected hotel was not found' });
+      }
+
+      const nights = calculateNights(checkInDate, checkOutDate);
+      if (nights < 1) {
+        return res.status(400).json({ message: 'Check-out date must be after check-in date' });
+      }
+
+      if (parsedRooms > hotel.availableRooms) {
+        return res.status(400).json({ message: 'Requested rooms exceed hotel availability' });
+      }
+
+      stayAmount = hotel.pricePerNight * parsedRooms * nights;
+      
+      // Update hotel availability
+      hotel.availableRooms -= parsedRooms;
+      await hotel.save();
+    } else if (tourPackId) {
+      const tourPack = await TourPack.findById(tourPackId);
+      if (!tourPack) {
+        return res.status(404).json({ message: 'Selected tour package was not found' });
+      }
+      packageAmount = packageAmountFromReq || (tourPack.price * parsedGuests);
+    } else {
+      return res.status(400).json({ message: 'Either a hotel or a tour package must be selected' });
+    }
+
     if (transportationId) {
-      transportation = await Transportation.findById(transportationId);
+      const transportation = await Transportation.findById(transportationId);
       if (!transportation) {
         return res.status(404).json({ message: 'Selected transportation was not found' });
       }
@@ -133,9 +158,9 @@ const createBooking = async (req, res) => {
       transportationAmount = transportation.price;
     }
 
-    const stayAmount = hotel.pricePerNight * parsedRooms * nights;
-    const serviceFee = Math.round(stayAmount * 0.08);
-    const totalAmount = stayAmount + transportationAmount + serviceFee;
+    const baseAmount = stayAmount + packageAmount;
+    const serviceFee = Math.round(baseAmount * 0.08);
+    const totalAmount = baseAmount + transportationAmount + serviceFee;
 
     const booking = await Booking.create({
       bookingReference: generateReference(),
@@ -143,16 +168,18 @@ const createBooking = async (req, res) => {
       email: normalizedEmail,
       phone: normalizedPhone,
       destination: normalizedDestination,
-      hotel: hotel._id,
-      transportation: transportation ? transportation._id : null,
-      checkInDate,
-      checkOutDate,
+      hotel: hotelId || null,
+      tourPack: tourPackId || null,
+      transportation: transportationId || null,
+      checkInDate: checkInDate || null,
+      checkOutDate: checkOutDate || null,
       guests: parsedGuests,
       adults: parsedAdults,
       children: parsedChildren,
-      rooms: parsedRooms,
-      nights,
+      rooms: hotelId ? parsedRooms : 0,
+      nights: hotelId ? calculateNights(checkInDate, checkOutDate) : 0,
       stayAmount,
+      packageAmount,
       transportationAmount,
       serviceFee,
       totalAmount,
@@ -161,8 +188,7 @@ const createBooking = async (req, res) => {
       itineraryNotes: Array.isArray(itineraryNotes) ? itineraryNotes : [],
     });
 
-    hotel.availableRooms -= parsedRooms;
-    await hotel.save();
+    // Hotel availability was already updated above if hotelId was present.
 
     const populatedBooking = await Booking.findById(booking._id).populate(BOOKING_POPULATE);
     res.status(201).json(populatedBooking);
@@ -239,7 +265,7 @@ const deleteBooking = async (req, res) => {
       return res.status(404).json({ message: 'Booking not found' });
     }
 
-    if (booking.bookingStatus !== 'cancelled') {
+    if (booking.bookingStatus !== 'cancelled' && booking.hotel) {
       const hotel = await Hotel.findById(booking.hotel);
       if (hotel) {
         hotel.availableRooms += booking.rooms;

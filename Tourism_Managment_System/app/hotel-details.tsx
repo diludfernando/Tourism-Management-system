@@ -14,8 +14,9 @@ import {
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
+import { API_BASE } from '../src/config';
 
-const API_URL = Platform.OS === 'android' ? 'http://10.0.2.2:5000' : 'http://localhost:5000';
+const API_URL = `${API_BASE}/api/hotels`;
 const { width } = Dimensions.get('window');
 
 type Hotel = {
@@ -42,11 +43,16 @@ const formatPrice = (value: number) =>
 
 export default function HotelDetailsScreen() {
   const router = useRouter();
-  const { id, transportId, admin } = useLocalSearchParams<{ id?: string; transportId?: string; admin?: string }>();
+  const { id, transportId, tourPackId, admin } = useLocalSearchParams<{ 
+    id?: string; 
+    transportId?: string; 
+    tourPackId?: string; 
+    admin?: string 
+  }>();
   const [hotel, setHotel] = useState<Hotel | null>(null);
   const [loading, setLoading] = useState(true);
   const isAdminMode = admin === 'true';
-  const isSelectionMode = Boolean(transportId);
+  const isSelectionMode = Boolean(transportId) || Boolean(tourPackId);
 
   const handleBack = useCallback(() => {
     if (isAdminMode) {
@@ -61,9 +67,12 @@ export default function HotelDetailsScreen() {
 
     router.push({
       pathname: '/hotels',
-      params: { transportId },
+      params: { 
+        transportId,
+        ...(tourPackId ? { tourPackId } : {}),
+      },
     });
-  }, [isAdminMode, router, transportId]);
+  }, [isAdminMode, router, transportId, tourPackId]);
 
   const fetchHotelDetails = useCallback(async () => {
     if (!id) {
@@ -72,7 +81,7 @@ export default function HotelDetailsScreen() {
     }
 
     try {
-      const response = await fetch(`${API_URL}/api/hotels/${id}`);
+      const response = await fetch(`${API_URL}/${id}`);
       const data = await response.json();
 
       if (!response.ok) {
@@ -258,6 +267,7 @@ export default function HotelDetailsScreen() {
                 params: {
                   hotelId: hotel._id,
                   ...(transportId ? { transportId } : {}),
+                  ...(tourPackId ? { tourPackId } : {}),
                 },
               })
             }
