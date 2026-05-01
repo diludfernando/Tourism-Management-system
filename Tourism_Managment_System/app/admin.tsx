@@ -3,6 +3,7 @@ import { StyleSheet, View, Text, TouchableOpacity, ScrollView, SafeAreaView, Pla
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { API_BASE } from '../src/config';
+import { getAuthRole } from '../src/auth';
 
 const API_URL = `${API_BASE}/api/bookings`;
 const formatPrice = (value: number) =>
@@ -15,13 +16,23 @@ export default function AdminScreen() {
   const router = useRouter();
   const { admin } = useLocalSearchParams<{ admin?: string }>();
   const [bookings, setBookings] = useState<any[]>([]);
-  const isAdminMode = admin === 'true';
+  const [hasVerifiedRole, setHasVerifiedRole] = useState(false);
+  const [isAdminMode, setIsAdminMode] = useState(false);
 
   useEffect(() => {
-    if (!isAdminMode) {
-      router.replace('/');
-    }
-  }, [isAdminMode, router]);
+    const verifyRole = async () => {
+      const role = await getAuthRole();
+      const allowed = role === 'admin';
+      setIsAdminMode(allowed);
+      setHasVerifiedRole(true);
+
+      if (!allowed) {
+        router.replace('/explore');
+      }
+    };
+
+    verifyRole();
+  }, [admin, router]);
 
   useFocusEffect(
     useCallback(() => {
@@ -55,7 +66,7 @@ export default function AdminScreen() {
     ];
   }, [bookings]);
 
-  if (!isAdminMode) {
+  if (!hasVerifiedRole || !isAdminMode) {
     return null;
   }
 
@@ -78,7 +89,17 @@ export default function AdminScreen() {
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Quick Actions</Text>
-          <TouchableOpacity style={styles.actionButton}>
+          <TouchableOpacity
+            style={[styles.actionButton, { backgroundColor: '#FF6B35' }]}
+            onPress={() => router.push('/admin/profile')}
+          >
+            <Ionicons name="person-outline" size={20} color="#FFF" />
+            <Text style={styles.actionButtonText}>My Profile</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={() => router.push({ pathname: '/admin/users', params: { admin: 'true' } } as any)}
+          >
             <Ionicons name="people-outline" size={20} color="#FFF" />
             <Text style={styles.actionButtonText}>User Management</Text>
           </TouchableOpacity>

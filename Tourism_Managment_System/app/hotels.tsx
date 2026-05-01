@@ -211,7 +211,7 @@ export default function HotelListScreen() {
               } else if (transportId) {
                 router.push({ pathname: '/transport-selection', params: { tourPackId, persons } });
               } else if (tourPackId) {
-                router.push({ pathname: `/my-tourpacks/${tourPackId}`, params: { persons } });
+                router.push({ pathname: `/my-tourpacks/${tourPackId}`, params: { persons } } as any);
               } else {
                 router.push('/explore');
               }

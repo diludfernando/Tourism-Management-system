@@ -1,20 +1,45 @@
 const User = require('../models/User');
 const generateToken = require('../utils/generateToken');
 
+const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).{8,}$/;
+const phoneRegex = /^\+?\d{10,15}$/;
+
+const normalizeName = (name) => (typeof name === 'string' ? name.trim().replace(/\s+/g, ' ') : '');
+const normalizeEmail = (email) => (typeof email === 'string' ? email.trim().toLowerCase() : '');
+const normalizePhoneNumber = (phoneNumber) => {
+  if (typeof phoneNumber !== 'string') return '';
+  const trimmed = phoneNumber.trim();
+  if (!trimmed) return '';
+  const hasPlus = trimmed.startsWith('+');
+  const digits = trimmed.replace(/\D/g, '');
+  return hasPlus ? `+${digits}` : digits;
+};
+
 // @desc    Auth user & get token
 // @route   POST /api/users/login
 // @access  Public
 const authUser = async (req, res) => {
   try {
     const { email, password } = req.body;
+    const normalizedEmail = normalizeEmail(email);
 
-    const user = await User.findOne({ email });
+    if (!normalizedEmail || !password) {
+      return res.status(400).json({ message: 'Email and password are required' });
+    }
+
+    if (!emailRegex.test(normalizedEmail)) {
+      return res.status(400).json({ message: 'Please enter a valid email address' });
+    }
+
+    const user = await User.findOne({ email: normalizedEmail });
 
     if (user && (await user.matchPassword(password))) {
       res.json({
         _id: user._id,
         name: user.name,
         email: user.email,
+        phoneNumber: user.phoneNumber,
         role: user.role,
         token: generateToken(user._id),
       });
@@ -22,7 +47,7 @@ const authUser = async (req, res) => {
       res.status(401).json({ message: 'Invalid email or password' });
     }
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    res.status(500).json({ message: 'Server error during login' });
   }
 };
 
@@ -31,17 +56,50 @@ const authUser = async (req, res) => {
 // @access  Public
 const registerUser = async (req, res) => {
   try {
-    const { name, email, password } = req.body;
+    const { name, email, password, phoneNumber } = req.body;
+    const normalizedName = normalizeName(name);
+    const normalizedEmail = normalizeEmail(email);
+    const normalizedPhoneNumber = normalizePhoneNumber(phoneNumber);
 
-    const userExists = await User.findOne({ email });
+    if (!normalizedName || !normalizedEmail || !password || !normalizedPhoneNumber) {
+      return res.status(400).json({ message: 'Name, phone number, email and password are required' });
+    }
+
+    if (normalizedName.length < 2 || normalizedName.length > 60) {
+      return res.status(400).json({ message: 'Name must be between 2 and 60 characters' });
+    }
+
+    if (!emailRegex.test(normalizedEmail)) {
+      return res.status(400).json({ message: 'Please enter a valid email address' });
+    }
+
+    if (!phoneRegex.test(normalizedPhoneNumber)) {
+      return res.status(400).json({ message: 'Please enter a valid phone number' });
+    }
+
+    if (!passwordRegex.test(password)) {
+      return res.status(400).json({
+        message:
+          'Password must be at least 8 characters and include uppercase, lowercase, number, and special character',
+      });
+    }
+
+    const userExists = await User.findOne({ email: normalizedEmail });
 
     if (userExists) {
       return res.status(400).json({ message: 'User already exists' });
     }
 
+    const phoneExists = await User.findOne({ phoneNumber: normalizedPhoneNumber });
+
+    if (phoneExists) {
+      return res.status(400).json({ message: 'Phone number is already in use' });
+    }
+
     const user = await User.create({
-      name,
-      email,
+      name: normalizedName,
+      email: normalizedEmail,
+      phoneNumber: normalizedPhoneNumber,
       password,
       role: 'user', // Default role
     });
@@ -51,6 +109,7 @@ const registerUser = async (req, res) => {
         _id: user._id,
         name: user.name,
         email: user.email,
+        phoneNumber: user.phoneNumber,
         role: user.role,
         token: generateToken(user._id),
       });
@@ -58,11 +117,206 @@ const registerUser = async (req, res) => {
       res.status(400).json({ message: 'Invalid user data' });
     }
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    if (error && error.code === 11000) {
+      if (error.keyPattern && error.keyPattern.email) {
+        return res.status(400).json({ message: 'Email is already in use' });
+      }
+      if (error.keyPattern && error.keyPattern.phoneNumber) {
+        return res.status(400).json({ message: 'Phone number is already in use' });
+      }
+    }
+    res.status(500).json({ message: 'Server error during registration' });
+  }
+};
+
+// @desc    Get all users
+// @route   GET /api/users
+// @access  Private/Admin
+const getUsers = async (req, res) => {
+  try {
+    const users = await User.find({})
+      .select('-password')
+      .sort({ createdAt: -1 });
+
+    res.json(users);
+  } catch (error) {
+    res.status(500).json({ message: 'Server error while loading users' });
+  }
+};
+
+// @desc    Delete a user
+// @route   DELETE /api/users/:id
+// @access  Private/Admin
+const deleteUser = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const user = await User.findById(id);
+
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    if (req.user && req.user._id && String(req.user._id) === String(user._id)) {
+      return res.status(400).json({ message: 'You cannot delete your own account' });
+    }
+
+    await User.findByIdAndDelete(id);
+    res.json({ success: true, message: 'User deleted successfully' });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error while deleting user' });
+  }
+};
+
+// @desc    Update current user profile
+// @route   PUT /api/users/me
+// @access  Private
+const updateProfile = async (req, res) => {
+  try {
+    const { name, phoneNumber } = req.body;
+    console.log('=== UPDATE PROFILE REQUEST ===');
+    console.log('User ID:', req.user._id);
+    console.log('Request body:', { name, phoneNumber });
+
+    const user = await User.findById(req.user._id);
+
+    if (!user) {
+      console.log('User not found');
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    console.log('Current user before update:', { name: user.name, phoneNumber: user.phoneNumber });
+
+    const updateData = {};
+
+    // Validate and prepare name update
+    if (name !== undefined && name !== null) {
+      const normalizedName = normalizeName(name);
+      console.log('Processing name:', { original: name, normalized: normalizedName });
+
+      if (!normalizedName) {
+        console.log('Name is empty after normalization');
+        return res.status(400).json({ message: 'Name is required' });
+      }
+
+      if (normalizedName.length < 2 || normalizedName.length > 60) {
+        console.log('Name length validation failed');
+        return res.status(400).json({ message: 'Name must be between 2 and 60 characters' });
+      }
+
+      if (normalizedName !== user.name) {
+        updateData.name = normalizedName;
+        console.log('Name will be updated to:', normalizedName);
+      } else {
+        console.log('Name unchanged');
+      }
+    }
+
+    // Validate and prepare phone update
+    if (phoneNumber !== undefined && phoneNumber !== null) {
+      const normalizedPhoneNumber = normalizePhoneNumber(phoneNumber);
+      console.log('Processing phone:', { original: phoneNumber, normalized: normalizedPhoneNumber });
+
+      if (!normalizedPhoneNumber) {
+        console.log('Phone is empty after normalization');
+        return res.status(400).json({ message: 'Phone number is required' });
+      }
+
+      if (!phoneRegex.test(normalizedPhoneNumber)) {
+        console.log('Phone regex validation failed');
+        return res.status(400).json({ message: 'Please enter a valid phone number' });
+      }
+
+      if (normalizedPhoneNumber !== user.phoneNumber) {
+        // Only check for duplicates if phone is actually changing
+        const existingPhone = await User.findOne({ phoneNumber: normalizedPhoneNumber });
+        console.log('Existing phone check:', { found: !!existingPhone, existingId: existingPhone?._id, currentId: user._id });
+        
+        if (existingPhone && String(existingPhone._id) !== String(user._id)) {
+          console.log('Phone already in use by another user');
+          return res.status(400).json({ message: 'Phone number is already in use' });
+        }
+
+        updateData.phoneNumber = normalizedPhoneNumber;
+        console.log('Phone will be updated to:', normalizedPhoneNumber);
+      } else {
+        console.log('Phone unchanged');
+      }
+    }
+
+    // If no changes, return current data
+    if (Object.keys(updateData).length === 0) {
+      console.log('No changes detected, returning current user data');
+      return res.json({
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        phoneNumber: user.phoneNumber,
+        role: user.role,
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt,
+      });
+    }
+
+    console.log('Attempting to update user with:', updateData);
+    const updatedUser = await User.findByIdAndUpdate(
+      req.user._id,
+      updateData,
+      { 
+        new: true, 
+        runValidators: true,
+        context: 'query'
+      }
+    ).select('-password');
+
+    console.log('User updated successfully');
+    console.log('Updated user:', { name: updatedUser.name, phoneNumber: updatedUser.phoneNumber, updatedAt: updatedUser.updatedAt });
+
+    res.json(updatedUser);
+  } catch (error) {
+    console.error('=== UPDATE PROFILE ERROR ===');
+    console.error('Error:', error);
+    console.error('Error message:', error.message);
+    console.error('Error code:', error.code);
+    console.error('Full error:', error);
+    
+    if (error.code === 11000) {
+      console.error('Duplicate key error on fields:', Object.keys(error.keyPattern));
+      const field = Object.keys(error.keyPattern)[0];
+      return res.status(400).json({ message: `${field} is already in use` });
+    }
+    
+    if (error.name === 'ValidationError') {
+      const messages = Object.values(error.errors).map((err) => err.message);
+      return res.status(400).json({ message: messages.join(', ') });
+    }
+    
+    res.status(500).json({ message: 'Server error while updating profile' });
+  }
+};
+
+// @desc    Get current user profile
+// @route   GET /api/users/me
+// @access  Private
+const getCurrentUser = async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id).select('-password');
+
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    res.json(user);
+  } catch (error) {
+    res.status(500).json({ message: 'Server error while fetching user profile' });
   }
 };
 
 module.exports = {
   authUser,
   registerUser,
+  getUsers,
+  deleteUser,
+  getCurrentUser,
+  updateProfile,
 };

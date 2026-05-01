@@ -60,6 +60,26 @@ export const getAuthToken = async () => {
   return null;
 };
 
+export const getAuthRole = async () => {
+  try {
+    const role = await AsyncStorage.getItem(AUTH_ROLE_KEY);
+    if (role) {
+      console.log('getAuthRole - retrieved from AsyncStorage');
+      return role;
+    }
+  } catch (error) {
+    console.error('getAuthRole - AsyncStorage error:', error);
+  }
+
+  if (memoryRole) {
+    console.log('getAuthRole - retrieved from memory (fallback)');
+    return memoryRole;
+  }
+
+  console.log('getAuthRole - no role found');
+  return null;
+};
+
 export const getAuthHeaders = async (baseHeaders: Record<string, string> = {}) => {
   try {
     console.log('getAuthHeaders - requesting token...');

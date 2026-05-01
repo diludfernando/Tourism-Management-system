@@ -149,8 +149,8 @@ export default function Explore() {
       <View style={styles.header}>
         <View style={{ width: 40 }} />
         <Text style={styles.headerTitle}>Explore Packages</Text>
-        <TouchableOpacity onPress={() => router.push('/')} style={styles.profileButton}>
-          <Ionicons name="home-outline" size={22} color="#111827" />
+        <TouchableOpacity onPress={() => router.push('/profile')} style={styles.profileButton}>
+          <Ionicons name="person-outline" size={22} color="#111827" />
         </TouchableOpacity>
       </View>
 

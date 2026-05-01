@@ -16,21 +16,56 @@ import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import { Image } from 'expo-image';
 import { API_BASE } from '../src/config';
+import { saveAuthSession } from '../src/auth';
 
 const API_URL = `${API_BASE}/api/users`;
+const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).{8,}$/;
+const phoneRegex = /^\+?[0-9]{10,15}$/;
 
 export default function SignupScreen() {
   const router = useRouter();
   
   const [name, setName] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
 
   const handleSignup = async () => {
-    if (!name || !email || !password) {
+    const normalizedName = name.trim().replace(/\s+/g, ' ');
+    const normalizedPhone = phoneNumber.trim();
+    const normalizedEmail = email.trim().toLowerCase();
+
+    if (!normalizedName || !normalizedPhone || !normalizedEmail || !password || !confirmPassword) {
       setErrorMsg('Please fill in all fields.');
+      return;
+    }
+
+    if (normalizedName.length < 2 || normalizedName.length > 60) {
+      setErrorMsg('Name must be between 2 and 60 characters.');
+      return;
+    }
+
+    if (!emailRegex.test(normalizedEmail)) {
+      setErrorMsg('Please enter a valid email address.');
+      return;
+    }
+
+    if (!phoneRegex.test(normalizedPhone)) {
+      setErrorMsg('Please enter a valid phone number (10-15 digits).');
+      return;
+    }
+
+    if (!passwordRegex.test(password)) {
+      setErrorMsg('Password must include upper/lowercase, number, special character, and be 8+ chars.');
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      setErrorMsg('Passwords do not match.');
       return;
     }
     
@@ -43,18 +78,37 @@ export default function SignupScreen() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ name, email, password }),
+        body: JSON.stringify({
+          name: normalizedName,
+          phoneNumber: normalizedPhone,
+          email: normalizedEmail,
+          password,
+        }),
       });
 
-      const data = await response.json();
-
-      if (response.ok) {
-        console.log('✅ Registration successful:', data.email);
-        Alert.alert('Success', 'Account created successfully!');
-        router.replace('/');
-      } else {
-        setErrorMsg(data.message || 'Registration failed');
+      const raw = await response.text();
+      let data: any = {};
+      try {
+        data = raw ? JSON.parse(raw) : {};
+      } catch {
+        data = {};
       }
+
+      if (!response.ok) {
+        setErrorMsg(data.message || 'Registration failed');
+        return;
+      }
+
+      if (!data?.token || !data?.role) {
+        setErrorMsg('Account created, but authentication data is missing. Please sign in.');
+        router.replace('/login');
+        return;
+      }
+
+      await saveAuthSession(data.token, data.role);
+      console.log('✅ Registration successful:', data.email);
+      Alert.alert('Success', 'Account created successfully!');
+      router.replace(data.role === 'admin' ? '/admin' : '/explore');
     } catch (error) {
       console.error('Signup Error:', error);
       setErrorMsg('Unable to connect to server.');
@@ -107,13 +161,28 @@ export default function SignupScreen() {
 
           <View style={styles.formContainer}>
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>Username</Text>
+              <Text style={styles.label}>Full Name</Text>
               <TextInput
                 style={styles.input}
-                placeholder="e.g. TravelGuru"
+                placeholder="e.g. Alex Fernando"
                 value={name}
                 onChangeText={(text) => { setName(text); setErrorMsg(''); }}
                 autoCapitalize="words"
+                textContentType="name"
+              />
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Phone Number</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="e.g. +94771234567"
+                value={phoneNumber}
+                onChangeText={(text) => { setPhoneNumber(text); setErrorMsg(''); }}
+                keyboardType="phone-pad"
+                autoCapitalize="none"
+                autoCorrect={false}
+                textContentType="telephoneNumber"
               />
             </View>
 
@@ -126,6 +195,8 @@ export default function SignupScreen() {
                 onChangeText={(text) => { setEmail(text); setErrorMsg(''); }}
                 keyboardType="email-address"
                 autoCapitalize="none"
+                autoCorrect={false}
+                textContentType="emailAddress"
               />
             </View>
 
@@ -137,8 +208,29 @@ export default function SignupScreen() {
                 value={password}
                 onChangeText={(text) => { setPassword(text); setErrorMsg(''); }}
                 secureTextEntry
+                autoCapitalize="none"
+                autoCorrect={false}
+                textContentType="newPassword"
               />
             </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Confirm Password</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Confirm your password"
+                value={confirmPassword}
+                onChangeText={(text) => { setConfirmPassword(text); setErrorMsg(''); }}
+                secureTextEntry
+                autoCapitalize="none"
+                autoCorrect={false}
+                textContentType="newPassword"
+              />
+            </View>
+
+            <Text style={styles.helperText}>
+              Use 8+ characters with uppercase, lowercase, number, and special character.
+            </Text>
 
             <TouchableOpacity 
               style={[styles.loginButton, loading && { opacity: 0.8 }]} 
@@ -234,6 +326,13 @@ const styles = StyleSheet.create({
   },
   formContainer: {
     width: '100%',
+  },
+  helperText: {
+    color: '#CBD5E0',
+    fontSize: 12,
+    marginTop: -8,
+    marginBottom: 12,
+    lineHeight: 18,
   },
   inputGroup: {
     marginBottom: 20,
