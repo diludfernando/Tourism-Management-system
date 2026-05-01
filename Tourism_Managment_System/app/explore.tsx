@@ -1,110 +1,148 @@
-import React, { useState } from 'react';
-import { 
-  StyleSheet, 
-  View, 
-  Text, 
-  TextInput, 
-  ScrollView, 
-  TouchableOpacity, 
-  Dimensions, 
-  FlatList 
+import React, { useMemo, useState } from 'react';
+import {
+  ActivityIndicator,
+  Dimensions,
+  FlatList,
+  Platform,
+  SafeAreaView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { Image } from 'expo-image';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
-import Animated, { FadeInDown, FadeInRight } from 'react-native-reanimated';
+import { useFocusEffect, useRouter } from 'expo-router';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 
+const API_URL = Platform.OS === 'android' ? 'http://10.0.2.2:5000' : 'http://localhost:5000';
 const { width } = Dimensions.get('window');
 
-const CATEGORIES = ['All', 'Beach', 'Mountain', 'City', 'Historic'];
+type Hotel = {
+  _id: string;
+  name: string;
+  location: string;
+  description?: string;
+  image?: string;
+  rating?: number;
+  pricePerNight: number;
+  accommodationType: string;
+  availableRooms: number;
+  isAvailable?: boolean;
+};
 
-const DESTINATIONS = [
-  {
-    id: '1',
-    name: 'Bora Bora',
-    location: 'French Polynesia',
-    image: require('@/assets/images/bali.png'),
-    rating: 4.9,
-    price: '$1,200',
-    category: 'Beach'
-  },
-  {
-    id: '2',
-    name: 'Zermatt',
-    location: 'Switzerland',
-    image: require('@/assets/images/alps.png'),
-    rating: 4.8,
-    price: '$1,500',
-    category: 'Mountain'
-  },
-  {
-    id: '3',
-    name: 'Eiffel Tower',
-    location: 'Paris, France',
-    image: require('@/assets/images/paris.png'),
-    rating: 4.7,
-    price: '$800',
-    category: 'City'
-  },
-  {
-    id: '4',
-    name: 'Machu Picchu',
-    location: 'Cusco, Peru',
-    image: require('@/assets/images/machu.png'),
-    rating: 4.9,
-    price: '$1,100',
-    category: 'Historic'
-  },
-];
+const formatPrice = (value: number) =>
+  `LKR ${Number(value || 0).toLocaleString(undefined, {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`;
+
+const categoryForHotel = (hotel: Hotel) => {
+  const type = hotel.accommodationType.toLowerCase();
+  const location = hotel.location.toLowerCase();
+
+  if (type.includes('beach') || location.includes('beach') || location.includes('negombo')) return 'Beach';
+  if (type.includes('hill') || type.includes('mountain') || location.includes('ella') || location.includes('kandy')) return 'Mountain';
+  if (type.includes('city') || location.includes('colombo')) return 'City';
+  if (location.includes('dambulla') || type.includes('eco')) return 'Nature';
+  return 'Featured';
+};
 
 export default function Explore() {
   const router = useRouter();
   const [activeCategory, setActiveCategory] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [hotels, setHotels] = useState<Hotel[]>([]);
 
-  const filteredDestinations = DESTINATIONS.filter(item => {
-    const matchesCategory = activeCategory === 'All' || item.category === activeCategory;
-    const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                         item.location.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesCategory && matchesSearch;
-  });
+  const fetchHotels = async () => {
+    setLoading(true);
+    try {
+      const response = await fetch(`${API_URL}/api/hotels`);
+      const data = await response.json();
+      if (response.ok) {
+        setHotels(Array.isArray(data) ? data : []);
+      } else {
+        setHotels([]);
+      }
+    } catch {
+      setHotels([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  const renderDestinationCard = ({ item, index }: { item: typeof DESTINATIONS[0], index: number }) => (
-    <Animated.View 
-      entering={FadeInDown.delay(index * 100).duration(800)}
-      style={styles.cardContainer}
-    >
-      <TouchableOpacity 
-        activeOpacity={0.9} 
+  useFocusEffect(
+    React.useCallback(() => {
+      fetchHotels();
+    }, [])
+  );
+
+  const categories = useMemo(() => {
+    const dynamicCategories = Array.from(new Set(hotels.map(categoryForHotel)));
+    return ['All', ...dynamicCategories];
+  }, [hotels]);
+
+  const filteredHotels = useMemo(() => {
+    return hotels.filter((item) => {
+      const category = categoryForHotel(item);
+      const matchesCategory = activeCategory === 'All' || category === activeCategory;
+      const matchesSearch =
+        item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        item.location.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        item.accommodationType.toLowerCase().includes(searchQuery.toLowerCase());
+      return matchesCategory && matchesSearch;
+    });
+  }, [activeCategory, hotels, searchQuery]);
+
+  const renderHotelCard = ({ item, index }: { item: Hotel; index: number }) => (
+    <Animated.View entering={FadeInDown.delay(index * 90).duration(700)} style={styles.cardContainer}>
+      <TouchableOpacity
+        activeOpacity={0.92}
         style={styles.card}
-        onPress={() => router.push('/transport-selection')}
+        onPress={() => router.push({ pathname: '/hotel-details', params: { id: item._id } })}
       >
-        <Image 
-          source={item.image} 
-          style={styles.cardImage} 
-          contentFit="cover"
-          transition={1000}
-        />
-        <View style={styles.cardOverlay} />
-        
-        <View style={styles.cardContent}>
-          <View style={styles.ratingBadge}>
-            <Ionicons name="star" size={12} color="#FFD700" />
-            <Text style={styles.ratingText}>{item.rating}</Text>
+        {item.image ? (
+          <Image source={{ uri: item.image }} style={styles.cardImage} contentFit="cover" transition={500} />
+        ) : (
+          <View style={styles.cardImageFallback}>
+            <Ionicons name="business-outline" size={52} color="#CBD5E1" />
           </View>
-          
+        )}
+
+        <View style={styles.cardOverlay} />
+
+        <View style={styles.priceBadge}>
+          <Text style={styles.priceText}>{formatPrice(item.pricePerNight)}</Text>
+        </View>
+
+        <View style={styles.availabilityBadge}>
+          <Text style={styles.availabilityText}>
+            {item.availableRooms > 0 && item.isAvailable !== false ? `${item.availableRooms} rooms` : 'Sold out'}
+          </Text>
+        </View>
+
+        <View style={styles.cardContent}>
+          <View style={styles.cardTopRow}>
+            <View style={styles.ratingBadge}>
+              <Ionicons name="star" size={12} color="#FACC15" />
+              <Text style={styles.ratingText}>{(item.rating ?? 0).toFixed(1)}</Text>
+            </View>
+            <View style={styles.categoryBadge}>
+              <Text style={styles.categoryBadgeText}>{categoryForHotel(item)}</Text>
+            </View>
+          </View>
+
           <View>
             <Text style={styles.destinationName}>{item.name}</Text>
             <View style={styles.locationContainer}>
-              <Ionicons name="location" size={14} color="#E0E0E0" />
+              <Ionicons name="location" size={14} color="#E2E8F0" />
               <Text style={styles.destinationLocation}>{item.location}</Text>
             </View>
+            <Text style={styles.accommodationType}>{item.accommodationType}</Text>
           </View>
-        </View>
-
-        <View style={styles.priceBadge}>
-          <Text style={styles.priceText}>{item.price}</Text>
         </View>
       </TouchableOpacity>
     </Animated.View>
@@ -113,91 +151,85 @@ export default function Explore() {
   return (
     <View style={styles.container}>
       <StatusBar style="dark" />
-      
-      {/* Header */}
+
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <Ionicons name="chevron-back" size={28} color="#000" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Explore</Text>
-        <TouchableOpacity style={styles.profileButton}>
-          <Image 
-            source={{ uri: 'https://i.pravatar.cc/150?u=travel' }} 
-            style={styles.profileImage} 
-          />
+        <TouchableOpacity onPress={() => router.push('/')} style={styles.profileButton}>
+          <Ionicons name="home-outline" size={22} color="#111827" />
         </TouchableOpacity>
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-        {/* Search Bar */}
-        <Animated.View entering={FadeInDown.delay(200)} style={styles.searchContainer}>
-          <View style={styles.searchBar}>
-            <Ionicons name="search" size={20} color="#888" />
-            <TextInput 
-              placeholder="Search destinations..." 
-              style={styles.searchInput}
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-              placeholderTextColor="#888"
-            />
-          </View>
-          <TouchableOpacity style={styles.filterButton}>
-            <Ionicons name="options" size={20} color="#FFF" />
-          </TouchableOpacity>
-        </Animated.View>
+      <FlatList
+        data={filteredHotels}
+        keyExtractor={(item) => item._id}
+        renderItem={renderHotelCard}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.listContent}
+        ListHeaderComponent={
+          <>
+            <Animated.View entering={FadeInDown.delay(140)} style={styles.searchContainer}>
+              <View style={styles.searchBar}>
+                <Ionicons name="search" size={20} color="#888" />
+                <TextInput
+                  placeholder="Search stays by name, location, or type..."
+                  style={styles.searchInput}
+                  value={searchQuery}
+                  onChangeText={setSearchQuery}
+                  placeholderTextColor="#888"
+                />
+              </View>
+            </Animated.View>
 
-        {/* Categories */}
-        <Animated.View entering={FadeInDown.delay(300)}>
-          <ScrollView 
-            horizontal 
-            showsHorizontalScrollIndicator={false} 
-            style={styles.categoriesContainer}
-            contentContainerStyle={styles.categoriesContent}
-          >
-            {CATEGORIES.map((category) => (
-              <TouchableOpacity 
-                key={category} 
-                onPress={() => setActiveCategory(category)}
-                style={[
-                  styles.categoryChip, 
-                  activeCategory === category && styles.activeCategoryChip
-                ]}
-              >
-                <Text style={[
-                  styles.categoryText, 
-                  activeCategory === category && styles.activeCategoryText
-                ]}>
-                  {category}
-                </Text>
+            <Animated.View entering={FadeInDown.delay(220)}>
+              <FlatList
+                data={categories}
+                keyExtractor={(item) => item}
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.categoriesContent}
+                renderItem={({ item }) => (
+                  <TouchableOpacity
+                    onPress={() => setActiveCategory(item)}
+                    style={[styles.categoryChip, activeCategory === item && styles.activeCategoryChip]}
+                  >
+                    <Text
+                      style={[styles.categoryText, activeCategory === item && styles.activeCategoryText]}
+                    >
+                      {item}
+                    </Text>
+                  </TouchableOpacity>
+                )}
+              />
+            </Animated.View>
+
+            <Animated.View entering={FadeInDown.delay(280)} style={styles.sectionHeader}>
+              <View>
+                <Text style={styles.sectionTitle}>Available stays</Text>
+                <Text style={styles.sectionSubtitle}>Live data from your tourism catalog</Text>
+              </View>
+              <TouchableOpacity onPress={fetchHotels}>
+                <Text style={styles.seeAllText}>Refresh</Text>
               </TouchableOpacity>
-            ))}
-          </ScrollView>
-        </Animated.View>
-
-        {/* Featured Title */}
-        <Animated.View entering={FadeInDown.delay(400)} style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Upcoming Adventures</Text>
-          <TouchableOpacity>
-            <Text style={styles.seeAllText}>See All</Text>
-          </TouchableOpacity>
-        </Animated.View>
-
-        {/* Destination List */}
-        <FlatList
-          data={filteredDestinations}
-          keyExtractor={(item) => item.id}
-          renderItem={renderDestinationCard}
-          scrollEnabled={false}
-          numColumns={1}
-          contentContainerStyle={styles.destinationsList}
-          ListEmptyComponent={
-            <View style={styles.emptyContainer}>
-              <Ionicons name="search-outline" size={64} color="#CCC" />
-              <Text style={styles.emptyText}>No destinations found</Text>
+            </Animated.View>
+          </>
+        }
+        ListEmptyComponent={
+          loading ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color="#003580" />
             </View>
-          }
-        />
-      </ScrollView>
+          ) : (
+            <View style={styles.emptyContainer}>
+              <Ionicons name="search-outline" size={64} color="#CBD5E1" />
+              <Text style={styles.emptyTitle}>No stays found</Text>
+              <Text style={styles.emptyText}>Try another search term or category.</Text>
+            </View>
+          )
+        }
+      />
     </View>
   );
 }
@@ -205,7 +237,7 @@ export default function Explore() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FAFAFA',
+    backgroundColor: '#F8FAFC',
   },
   header: {
     flexDirection: 'row',
@@ -213,14 +245,16 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingTop: 60,
     paddingHorizontal: 20,
-    paddingBottom: 20,
+    paddingBottom: 18,
     backgroundColor: '#FFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
   },
   backButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: '#F3F4F6',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -233,34 +267,26 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    overflow: 'hidden',
+    backgroundColor: '#F3F4F6',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  profileImage: {
-    width: '100%',
-    height: '100%',
-  },
-  scrollContent: {
-    paddingBottom: 40,
+  listContent: {
+    paddingBottom: 36,
   },
   searchContainer: {
-    flexDirection: 'row',
     paddingHorizontal: 20,
     marginTop: 20,
-    gap: 12,
   },
   searchBar: {
-    flex: 1,
     height: 54,
     backgroundColor: '#FFF',
     borderRadius: 16,
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 15,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 2,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
   },
   searchInput: {
     flex: 1,
@@ -268,33 +294,18 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#333',
   },
-  filterButton: {
-    width: 54,
-    height: 54,
-    backgroundColor: '#003580',
-    borderRadius: 16,
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#003580',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  categoriesContainer: {
-    marginTop: 25,
-  },
   categoriesContent: {
     paddingHorizontal: 20,
+    paddingTop: 18,
     gap: 12,
   },
   categoryChip: {
-    paddingHorizontal: 20,
+    paddingHorizontal: 18,
     paddingVertical: 10,
-    borderRadius: 25,
+    borderRadius: 999,
     backgroundColor: '#FFF',
     borderWidth: 1,
-    borderColor: '#EFEFEF',
+    borderColor: '#E5E7EB',
   },
   activeCategoryChip: {
     backgroundColor: '#003580',
@@ -311,56 +322,125 @@ const styles = StyleSheet.create({
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-end',
     paddingHorizontal: 20,
-    marginTop: 35,
-    marginBottom: 15,
+    marginTop: 26,
+    marginBottom: 16,
   },
   sectionTitle: {
     fontSize: 22,
     fontWeight: '700',
     color: '#000',
   },
+  sectionSubtitle: {
+    marginTop: 4,
+    fontSize: 13,
+    color: '#64748B',
+  },
   seeAllText: {
     fontSize: 14,
     color: '#003580',
     fontWeight: '600',
   },
-  destinationsList: {
-    paddingHorizontal: 20,
-    gap: 20,
-  },
   cardContainer: {
-    width: '100%',
-    height: 240,
+    marginHorizontal: 20,
+    marginBottom: 20,
+    width: width - 40,
+    height: 255,
     borderRadius: 24,
     overflow: 'hidden',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.2,
-    shadowRadius: 12,
+    shadowOpacity: 0.14,
+    shadowRadius: 16,
     elevation: 5,
   },
   card: {
     width: '100%',
     height: '100%',
+    backgroundColor: '#0F172A',
   },
   cardImage: {
     width: '100%',
     height: '100%',
   },
+  cardImageFallback: {
+    width: '100%',
+    height: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#1E293B',
+  },
   cardOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.3)',
+    backgroundColor: 'rgba(0,0,0,0.34)',
+  },
+  priceBadge: {
+    position: 'absolute',
+    top: 18,
+    left: 18,
+    backgroundColor: '#003580',
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 12,
+  },
+  priceText: {
+    color: '#FFF',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  availabilityBadge: {
+    position: 'absolute',
+    top: 18,
+    right: 18,
+    backgroundColor: 'rgba(255,255,255,0.18)',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 12,
+  },
+  availabilityText: {
+    color: '#FFF',
+    fontSize: 12,
+    fontWeight: '700',
   },
   cardContent: {
     position: 'absolute',
-    bottom: 20,
     left: 20,
     right: 20,
+    bottom: 18,
+    gap: 18,
+  },
+  cardTopRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-end',
+    alignItems: 'center',
+  },
+  ratingBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.22)',
+    paddingHorizontal: 9,
+    paddingVertical: 5,
+    borderRadius: 999,
+    gap: 4,
+  },
+  ratingText: {
+    color: '#FFF',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  categoryBadge: {
+    backgroundColor: 'rgba(15,23,42,0.5)',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.18)',
+  },
+  categoryBadgeText: {
+    color: '#FFF',
+    fontSize: 12,
+    fontWeight: '700',
   },
   destinationName: {
     color: '#FFF',
@@ -374,47 +454,34 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   destinationLocation: {
-    color: '#E0E0E0',
+    color: '#E2E8F0',
     fontSize: 14,
   },
-  ratingBadge: {
-    flexDirection: 'row',
+  accommodationType: {
+    color: '#CBD5E1',
+    fontSize: 13,
+    marginTop: 6,
+  },
+  loadingContainer: {
     alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.25)',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-    gap: 4,
-    position: 'absolute',
-    top: -180,
-    right: 0,
-  },
-  ratingText: {
-    color: '#FFF',
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  priceBadge: {
-    position: 'absolute',
-    top: 20,
-    left: 20,
-    backgroundColor: '#003580',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 12,
-  },
-  priceText: {
-    color: '#FFF',
-    fontSize: 14,
-    fontWeight: '700',
+    justifyContent: 'center',
+    marginTop: 60,
   },
   emptyContainer: {
     alignItems: 'center',
-    marginTop: 50,
+    marginTop: 60,
+    paddingHorizontal: 20,
+  },
+  emptyTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#0F172A',
+    marginTop: 12,
   },
   emptyText: {
-    fontSize: 16,
-    color: '#999',
-    marginTop: 10,
+    fontSize: 14,
+    color: '#64748B',
+    marginTop: 6,
+    textAlign: 'center',
   },
 });

@@ -53,11 +53,11 @@ export default function Index() {
             <Text style={styles.secondaryButtonText}>Sign In / Register</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.adminButton}
-            onPress={() => router.push('/admin')}
+            onPress={() => router.push('/admin/my-tourpacks')}
           >
-            <Text style={styles.adminButtonText}>Admin Panel (Temp)</Text>
+            <Text style={styles.adminButtonText}>Manage Tour Packages</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -153,18 +153,19 @@ const styles = StyleSheet.create({
     textDecorationLine: 'underline',
   },
   adminButton: {
-    marginTop: 10,
-    padding: 10,
+    height: 56,
+    borderRadius: 28,
+    justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderRadius: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.12)',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
+    borderColor: 'rgba(255, 255, 255, 0.25)',
   },
   adminButtonText: {
-    color: 'rgba(255, 255, 255, 0.6)',
-    fontSize: 14,
-    fontWeight: '400',
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+    letterSpacing: 0.5,
   },
   footerContainer: {
     position: 'absolute',

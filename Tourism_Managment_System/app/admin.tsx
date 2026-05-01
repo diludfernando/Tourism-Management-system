@@ -1,22 +1,73 @@
-import React from 'react';
-import { StyleSheet, View, Text, TouchableOpacity, ScrollView, SafeAreaView } from 'react-native';
-import { useRouter } from 'expo-router';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { StyleSheet, View, Text, TouchableOpacity, ScrollView, SafeAreaView, Platform } from 'react-native';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+
+const API_URL = Platform.OS === 'android' ? 'http://10.0.2.2:5000' : 'http://localhost:5000';
+const formatPrice = (value: number) =>
+  `LKR ${Number(value || 0).toLocaleString(undefined, {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`;
 
 export default function AdminScreen() {
   const router = useRouter();
+  const { admin } = useLocalSearchParams<{ admin?: string }>();
+  const [bookings, setBookings] = useState<any[]>([]);
+  const isAdminMode = admin === 'true';
 
-  const adminStats = [
-    { title: 'Total Bookings', value: '1,234', icon: 'calendar-outline' },
-    { title: 'Active Users', value: '567', icon: 'people-outline' },
-    { title: 'Total Revenue', value: '$45,678', icon: 'cash-outline' },
-    { title: 'Pending Inquiries', value: '12', icon: 'chatbubble-outline' },
-  ];
+  useEffect(() => {
+    if (!isAdminMode) {
+      router.replace('/');
+    }
+  }, [isAdminMode, router]);
+
+  useFocusEffect(
+    useCallback(() => {
+      const loadBookings = async () => {
+        try {
+          const response = await fetch(`${API_URL}/api/bookings`);
+          const data = await response.json();
+          if (response.ok) {
+            setBookings(data);
+          }
+        } catch {
+          setBookings([]);
+        }
+      };
+
+      loadBookings();
+    }, [])
+  );
+
+  const adminStats = useMemo(() => {
+    const activeBookings = bookings.filter((booking) => booking.bookingStatus !== 'cancelled');
+    const pendingCount = bookings.filter((booking) => booking.bookingStatus === 'pending').length;
+    const paidCount = bookings.filter((booking) => booking.paymentStatus === 'paid').length;
+    const totalRevenue = activeBookings.reduce((sum, booking) => sum + (booking.totalAmount || 0), 0);
+
+    return [
+      { title: 'Total Bookings', value: `${bookings.length}`, icon: 'calendar-outline' },
+      { title: 'Trips Pending', value: `${pendingCount}`, icon: 'time-outline' },
+    { title: 'Active Revenue', value: formatPrice(totalRevenue), icon: 'cash-outline' },
+      { title: 'Paid Journeys', value: `${paidCount}`, icon: 'checkmark-done-outline' },
+    ];
+  }, [bookings]);
+
+  if (!isAdminMode) {
+    return null;
+  }
 
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
+        <TouchableOpacity onPress={() => router.push('/')} style={styles.backButton}>
+          <Ionicons name="arrow-back" size={24} color="#000" />
+        </TouchableOpacity>
         <Text style={styles.headerTitle}>Admin Dashboard</Text>
+        <TouchableOpacity onPress={() => router.push('/')} style={styles.backButton}>
+          <Ionicons name="home-outline" size={22} color="#000" />
+        </TouchableOpacity>
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
@@ -42,14 +93,21 @@ export default function AdminScreen() {
           </TouchableOpacity>
           <TouchableOpacity 
             style={styles.actionButton}
-            onPress={() => router.push('/add-transportation')}
+            onPress={() => router.push({ pathname: '/add-transportation', params: { admin: 'true' } })}
           >
             <Ionicons name="bus-outline" size={20} color="#FFF" />
             <Text style={styles.actionButtonText}>Add New Transportation</Text>
           </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={() => router.push('/admin/my-tourpacks/index')}
+          >
+            <Ionicons name="briefcase-outline" size={20} color="#FFF" />
+            <Text style={styles.actionButtonText}>Manage Tour Packages</Text>
+          </TouchableOpacity>
           <TouchableOpacity 
             style={styles.actionButton}
-            onPress={() => router.push('/add-hotel')}
+            onPress={() => router.push({ pathname: '/add-hotel', params: { admin: 'true' } })}
           >
             <Ionicons name="home-outline" size={20} color="#FFF" />
             <Text style={styles.actionButtonText}>Add new Hotel / Accommodation</Text>
@@ -57,14 +115,17 @@ export default function AdminScreen() {
           
           <TouchableOpacity 
             style={styles.actionButton}
-            onPress={() => router.push('/hotels')}
+            onPress={() => router.push({ pathname: '/hotels', params: { admin: 'true' } })}
           >
             <Ionicons name="business-outline" size={20} color="#FFF" />
             <Text style={styles.actionButtonText}>Manage Hotels</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.actionButton}>
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={() => router.push({ pathname: '/booking-management', params: { admin: 'true' } })}
+          >
             <Ionicons name="calendar-outline" size={20} color="#FFF" />
-            <Text style={styles.actionButtonText}>Booking Managment</Text>
+            <Text style={styles.actionButtonText}>Booking Management</Text>
           </TouchableOpacity>
         
           <TouchableOpacity 
@@ -89,12 +150,15 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: 20,
     paddingVertical: 15,
     backgroundColor: '#FFF',
     borderBottomWidth: 1,
     borderBottomColor: '#EEE',
+  },
+  backButton: {
+    padding: 10,
   },
   headerTitle: {
     fontSize: 20,

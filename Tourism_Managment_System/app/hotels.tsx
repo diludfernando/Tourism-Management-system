@@ -10,16 +10,23 @@ import {
   Alert,
   Platform
 } from 'react-native';
-import { useRouter, useFocusEffect } from 'expo-router';
+import { useRouter, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { Image } from 'expo-image';
 
 const API_URL = Platform.OS === 'android' ? 'http://10.0.2.2:5000' : 'http://localhost:5000';
+const formatPrice = (value: number) =>
+  `LKR ${Number(value || 0).toLocaleString(undefined, {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`;
 
 export default function HotelListScreen() {
   const router = useRouter();
+  const { transportId, admin } = useLocalSearchParams<{ transportId?: string; admin?: string }>();
   const [hotels, setHotels] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const isAdminMode = admin === 'true';
+  const isSelectionMode = Boolean(transportId);
 
   const fetchHotels = async () => {
     setLoading(true);
@@ -91,7 +98,16 @@ export default function HotelListScreen() {
   const renderItem = ({ item }: { item: any }) => (
     <TouchableOpacity 
       style={styles.card}
-      onPress={() => router.push({ pathname: '/hotel-details', params: { id: item._id } })}
+      onPress={() =>
+        router.push({
+          pathname: '/hotel-details',
+          params: {
+            id: item._id,
+            ...(isAdminMode ? { admin: 'true' } : {}),
+            ...(transportId ? { transportId } : {}),
+          },
+        })
+      }
     >
       <View style={styles.cardHeader}>
         <Text style={styles.hotelName}>{item.name}</Text>
@@ -101,46 +117,76 @@ export default function HotelListScreen() {
         <Ionicons name="location-outline" size={14} /> {item.location}
       </Text>
       <View style={styles.cardDetails}>
-        <Text style={styles.priceText}>LKR {item.pricePerNight} / night</Text>
+      <Text style={styles.priceText}>{formatPrice(item.pricePerNight)} / night</Text>
         <Text style={[styles.statusText, item.isAvailable ? styles.available : styles.unavailable]}>
           {item.isAvailable ? `Available (${item.availableRooms} rooms)` : 'Sold Out'}
         </Text>
       </View>
-      <View style={styles.cardActions}>
-        <TouchableOpacity 
-          style={[styles.actionButton, styles.editButton]}
-          onPress={(e: any) => {
-            if (e && e.stopPropagation) e.stopPropagation();
-            router.push({ pathname: '/edit-hotel', params: { id: item._id } });
-          }}
-        >
-          <Ionicons name="create-outline" size={16} color="#FFF" />
-          <Text style={styles.actionButtonText}>Edit</Text>
-        </TouchableOpacity>
-        <TouchableOpacity 
-          style={[styles.actionButton, styles.deleteButton]}
-          onPress={(e: any) => {
-            if (e && e.stopPropagation) e.stopPropagation();
-            handleDelete(item._id);
-          }}
-        >
-          <Ionicons name="trash-outline" size={16} color="#FFF" />
-          <Text style={styles.actionButtonText}>Delete</Text>
-        </TouchableOpacity>
-      </View>
+      {isAdminMode ? (
+        <View style={styles.cardActions}>
+          <TouchableOpacity 
+            style={[styles.actionButton, styles.editButton]}
+            onPress={(e: any) => {
+              if (e && e.stopPropagation) e.stopPropagation();
+              router.push({ pathname: '/edit-hotel', params: { id: item._id, admin: 'true' } });
+            }}
+          >
+            <Ionicons name="create-outline" size={16} color="#FFF" />
+            <Text style={styles.actionButtonText}>Edit</Text>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={[styles.actionButton, styles.deleteButton]}
+            onPress={(e: any) => {
+              if (e && e.stopPropagation) e.stopPropagation();
+              handleDelete(item._id);
+            }}
+          >
+            <Ionicons name="trash-outline" size={16} color="#FFF" />
+            <Text style={styles.actionButtonText}>Delete</Text>
+          </TouchableOpacity>
+        </View>
+      ) : null}
     </TouchableOpacity>
   );
 
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.push('/admin')} style={styles.backButton}>
+        <TouchableOpacity
+          onPress={() => {
+            if (isAdminMode) {
+              router.push({ pathname: '/admin', params: { admin: 'true' } });
+              return;
+            }
+
+            if (isSelectionMode) {
+              router.push('/transport-selection');
+              return;
+            }
+
+            router.push('/explore');
+          }}
+          style={styles.backButton}
+        >
           <Ionicons name="arrow-back" size={24} color="#000" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Manage Accommodations</Text>
-        <TouchableOpacity onPress={() => router.push('/add-hotel')} style={styles.addButton}>
-          <Ionicons name="add" size={28} color="#003580" />
-        </TouchableOpacity>
+        <Text style={styles.headerTitle}>
+          {isAdminMode ? 'Manage Accommodations' : isSelectionMode ? 'Choose Accommodation' : 'Browse Accommodations'}
+        </Text>
+        {!isAdminMode ? (
+          <TouchableOpacity onPress={() => router.push('/')} style={styles.addButton}>
+            <Ionicons name="home-outline" size={24} color="#003580" />
+          </TouchableOpacity>
+        ) : (
+          <View style={styles.headerActions}>
+            <TouchableOpacity onPress={() => router.push('/')} style={styles.addButton}>
+              <Ionicons name="home-outline" size={24} color="#003580" />
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => router.push({ pathname: '/add-hotel', params: { admin: 'true' } })} style={styles.addButton}>
+              <Ionicons name="add" size={28} color="#003580" />
+            </TouchableOpacity>
+          </View>
+        )}
       </View>
 
       {loading ? (
@@ -151,12 +197,14 @@ export default function HotelListScreen() {
         <View style={styles.centerContainer}>
           <Ionicons name="business-outline" size={64} color="#CCC" />
           <Text style={styles.emptyText}>No accommodations found.</Text>
-          <TouchableOpacity 
-            style={styles.addFirstButton}
-            onPress={() => router.push('/add-hotel')}
-          >
-            <Text style={styles.addFirstButtonText}>Add New Accommodation</Text>
-          </TouchableOpacity>
+          {isAdminMode ? (
+            <TouchableOpacity 
+              style={styles.addFirstButton}
+              onPress={() => router.push({ pathname: '/add-hotel', params: { admin: 'true' } })}
+            >
+              <Text style={styles.addFirstButtonText}>Add New Accommodation</Text>
+            </TouchableOpacity>
+          ) : null}
         </View>
       ) : (
         <FlatList
@@ -195,6 +243,14 @@ const styles = StyleSheet.create({
   },
   addButton: {
     padding: 5,
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  addButtonPlaceholder: {
+    width: 38,
   },
   centerContainer: {
     flex: 1,

@@ -51,7 +51,7 @@ export default function LoginScreen() {
         console.log('✅ Login successful:', data.email, 'Role:', data.role);
         
         if (data.role === 'admin') {
-          router.replace('/admin');
+          router.replace({ pathname: '/admin', params: { admin: 'true' } });
         } else {
           router.replace('/explore');
         }
@@ -89,6 +89,9 @@ export default function LoginScreen() {
         <View style={styles.header}>
           <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
             <Ionicons name="arrow-back" size={24} color="#FFF" />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => router.push('/')} style={styles.backButton}>
+            <Ionicons name="home-outline" size={22} color="#FFF" />
           </TouchableOpacity>
         </View>
 

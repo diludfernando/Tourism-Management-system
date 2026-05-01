@@ -34,7 +34,7 @@ const ACCOMMODATION_TYPES = [
 
 export default function EditHotelScreen() {
   const router = useRouter();
-  const { id } = useLocalSearchParams();
+  const { id, admin } = useLocalSearchParams<{ id?: string; admin?: string }>();
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
   const [showTypePicker, setShowTypePicker] = useState(false);
@@ -51,12 +51,18 @@ export default function EditHotelScreen() {
     contactNumber: '',
     amenities: '',
   });
+  const isAdminMode = admin === 'true';
 
   useEffect(() => {
+    if (!isAdminMode) {
+      router.replace('/');
+      return;
+    }
+
     if (id) {
       fetchHotelDetails();
     }
-  }, [id]);
+  }, [id, isAdminMode, router]);
 
   const fetchHotelDetails = async () => {
     try {
@@ -77,12 +83,12 @@ export default function EditHotelScreen() {
         if (data.image) setImage(data.image);
       } else {
         Alert.alert('Error', data.message || 'Failed to fetch details');
-        router.back();
+        router.push({ pathname: '/hotels', params: { admin: 'true' } });
       }
     } catch (error) {
       console.error('Fetch Error:', error);
       Alert.alert('Error', 'Could not connect to the server.');
-      router.back();
+      router.push({ pathname: '/hotels', params: { admin: 'true' } });
     } finally {
       setFetching(false);
     }
@@ -152,7 +158,7 @@ export default function EditHotelScreen() {
             { 
               text: 'OK', 
               onPress: () => {
-                router.back(); // Go back to details or list
+                router.push({ pathname: '/hotel-details', params: { id: String(id), admin: 'true' } });
               } 
             }
           ]
@@ -172,6 +178,10 @@ export default function EditHotelScreen() {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
+  if (!isAdminMode) {
+    return null;
+  }
+
   if (fetching) {
     return (
       <SafeAreaView style={styles.loadingContainer}>
@@ -183,11 +193,13 @@ export default function EditHotelScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.push('/hotels')} style={styles.backButton}>
+        <TouchableOpacity onPress={() => router.push({ pathname: '/hotels', params: { admin: 'true' } })} style={styles.backButton}>
           <Ionicons name="arrow-back" size={24} color="#000" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Edit Accommodation</Text>
-        <View style={{ width: 44 }} />
+        <TouchableOpacity onPress={() => router.push('/')} style={styles.backButton}>
+          <Ionicons name="home-outline" size={22} color="#000" />
+        </TouchableOpacity>
       </View>
 
       <KeyboardAvoidingView 

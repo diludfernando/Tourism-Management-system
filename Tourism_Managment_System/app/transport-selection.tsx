@@ -17,6 +17,11 @@ import { Image } from 'expo-image';
 
 // Configuration for API URL
 const API_URL = Platform.OS === 'android' ? 'http://10.0.2.2:5000' : 'http://localhost:5000';
+const formatPrice = (value: number) =>
+  `LKR ${Number(value || 0).toLocaleString(undefined, {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`;
 
 interface Vehicle {
   _id: string;
@@ -90,7 +95,7 @@ export default function TransportSelectionScreen() {
         
         <View style={styles.priceFloatingBadge}>
           <Text style={styles.priceLabel}>Starting from</Text>
-          <Text style={styles.priceAmount}>LKR {item.price.toLocaleString()}</Text>
+          <Text style={styles.priceAmount}>{formatPrice(item.price)}</Text>
         </View>
       </View>
 
@@ -120,7 +125,12 @@ export default function TransportSelectionScreen() {
 
         <TouchableOpacity 
           style={styles.actionButton}
-          onPress={() => alert(`Reserved: ${item.brandModel || item.vehicleType}`)}
+          onPress={() =>
+            router.push({
+              pathname: '/hotels',
+              params: { transportId: item._id },
+            })
+          }
         >
           <Text style={styles.actionButtonText}>Book Now</Text>
           <Ionicons name="arrow-forward" size={18} color="#FFF" />
@@ -138,8 +148,8 @@ export default function TransportSelectionScreen() {
             <Ionicons name="chevron-back" size={28} color="#000" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Choose Transport</Text>
-          <TouchableOpacity style={styles.filterIconButton}>
-            <Ionicons name="options-outline" size={24} color="#000" />
+          <TouchableOpacity onPress={() => router.push('/')} style={styles.filterIconButton}>
+            <Ionicons name="home-outline" size={22} color="#000" />
           </TouchableOpacity>
         </View>
 
@@ -387,4 +397,3 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
 });
-

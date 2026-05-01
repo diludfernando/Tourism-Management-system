@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { 
   StyleSheet, 
   View, 
@@ -15,7 +15,7 @@ import {
   FlatList,
   Dimensions
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { Image } from 'expo-image';
@@ -35,6 +35,7 @@ const ACCOMMODATION_TYPES = [
 
 export default function AddHotelScreen() {
   const router = useRouter();
+  const { admin } = useLocalSearchParams<{ admin?: string }>();
   const [loading, setLoading] = useState(false);
   const [showTypePicker, setShowTypePicker] = useState(false);
   const [image, setImage] = useState<string | null>(null);
@@ -49,6 +50,13 @@ export default function AddHotelScreen() {
     contactNumber: '',
     amenities: '', // Will split by comma before sending
   });
+  const isAdminMode = admin === 'true';
+
+  useEffect(() => {
+    if (!isAdminMode) {
+      router.replace('/');
+    }
+  }, [isAdminMode, router]);
 
   const pickImage = async () => {
     let result = await ImagePicker.launchImageLibraryAsync({
@@ -113,14 +121,14 @@ export default function AddHotelScreen() {
           [
             { 
               text: 'OK', 
-              onPress: () => router.push('/hotels')
+              onPress: () => router.push({ pathname: '/hotels', params: { admin: 'true' } })
             }
           ]
         );
         
         if (Platform.OS === 'web') {
           setTimeout(() => {
-            router.push('/hotels');
+            router.push({ pathname: '/hotels', params: { admin: 'true' } });
           }, 1500);
         }
       } else {
@@ -141,14 +149,20 @@ export default function AddHotelScreen() {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
+  if (!isAdminMode) {
+    return null;
+  }
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.push('/admin')} style={styles.backButton}>
+        <TouchableOpacity onPress={() => router.push({ pathname: '/admin', params: { admin: 'true' } })} style={styles.backButton}>
           <Ionicons name="arrow-back" size={24} color="#000" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Add Accommodation</Text>
-        <View style={{ width: 44 }} />
+        <TouchableOpacity onPress={() => router.push('/')} style={styles.backButton}>
+          <Ionicons name="home-outline" size={22} color="#000" />
+        </TouchableOpacity>
       </View>
 
       <KeyboardAvoidingView 

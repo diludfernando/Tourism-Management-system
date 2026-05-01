@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { 
   StyleSheet, 
   View, 
@@ -15,7 +15,7 @@ import {
   FlatList,
   Dimensions
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { Image } from 'expo-image';
@@ -37,6 +37,7 @@ const VEHICLE_TYPES = [
 
 export default function AddTransportationScreen() {
   const router = useRouter();
+  const { admin } = useLocalSearchParams<{ admin?: string }>();
   const [loading, setLoading] = useState(false);
   const [showVehicleTypePicker, setShowVehicleTypePicker] = useState(false);
   const [image, setImage] = useState<string | null>(null);
@@ -48,6 +49,13 @@ export default function AddTransportationScreen() {
     price: '',
     description: '',
   });
+  const isAdminMode = admin === 'true';
+
+  useEffect(() => {
+    if (!isAdminMode) {
+      router.replace('/');
+    }
+  }, [isAdminMode, router]);
 
   const pickImage = async () => {
     // No permissions request is necessary for launching the image library
@@ -101,7 +109,7 @@ export default function AddTransportationScreen() {
               text: 'OK', 
               onPress: () => {
                 console.log('User clicked OK, redirecting to /admin');
-                router.push('/admin');
+                router.push({ pathname: '/admin', params: { admin: 'true' } });
               } 
             }
           ]
@@ -110,7 +118,7 @@ export default function AddTransportationScreen() {
         // Fallback for web if Alert button doesn't trigger
         if (Platform.OS === 'web') {
           setTimeout(() => {
-            router.push('/admin');
+            router.push({ pathname: '/admin', params: { admin: 'true' } });
           }, 1500);
         }
       } else {
@@ -132,14 +140,20 @@ export default function AddTransportationScreen() {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
+  if (!isAdminMode) {
+    return null;
+  }
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+        <TouchableOpacity onPress={() => router.push({ pathname: '/admin', params: { admin: 'true' } })} style={styles.backButton}>
           <Ionicons name="arrow-back" size={24} color="#000" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Add Transportation</Text>
-        <View style={{ width: 44 }} />
+        <TouchableOpacity onPress={() => router.push('/')} style={styles.backButton}>
+          <Ionicons name="home-outline" size={22} color="#000" />
+        </TouchableOpacity>
       </View>
 
       <KeyboardAvoidingView 

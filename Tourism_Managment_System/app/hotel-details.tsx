@@ -1,58 +1,117 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  StyleSheet, 
-  View, 
-  Text, 
-  TouchableOpacity, 
-  ScrollView, 
-  SafeAreaView, 
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import {
   ActivityIndicator,
   Alert,
+  Dimensions,
   Platform,
-  Dimensions
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 
 const API_URL = Platform.OS === 'android' ? 'http://10.0.2.2:5000' : 'http://localhost:5000';
 const { width } = Dimensions.get('window');
 
+type Hotel = {
+  _id: string;
+  name: string;
+  location: string;
+  description?: string;
+  pricePerNight: number;
+  totalRooms: number;
+  availableRooms: number;
+  amenities?: string[];
+  image?: string;
+  rating?: number;
+  accommodationType: string;
+  contactNumber?: string;
+  isAvailable?: boolean;
+};
+
+const formatPrice = (value: number) =>
+  `LKR ${Number(value || 0).toLocaleString(undefined, {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`;
+
 export default function HotelDetailsScreen() {
   const router = useRouter();
-  const { id } = useLocalSearchParams();
-  const [hotel, setHotel] = useState<any>(null);
+  const { id, transportId, admin } = useLocalSearchParams<{ id?: string; transportId?: string; admin?: string }>();
+  const [hotel, setHotel] = useState<Hotel | null>(null);
   const [loading, setLoading] = useState(true);
+  const isAdminMode = admin === 'true';
+  const isSelectionMode = Boolean(transportId);
 
-  useEffect(() => {
-    if (id) {
-      fetchHotelDetails();
+  const handleBack = useCallback(() => {
+    if (isAdminMode) {
+      router.push({ pathname: '/hotels', params: { admin: 'true' } });
+      return;
     }
-  }, [id]);
 
-  const fetchHotelDetails = async () => {
+    if (!transportId) {
+      router.push('/explore');
+      return;
+    }
+
+    router.push({
+      pathname: '/hotels',
+      params: { transportId },
+    });
+  }, [isAdminMode, router, transportId]);
+
+  const fetchHotelDetails = useCallback(async () => {
+    if (!id) {
+      setLoading(false);
+      return;
+    }
+
     try {
       const response = await fetch(`${API_URL}/api/hotels/${id}`);
       const data = await response.json();
-      if (response.ok) {
-        setHotel(data);
-      } else {
+
+      if (!response.ok) {
         Alert.alert('Error', data.message || 'Failed to fetch hotel details');
-        router.back();
+        handleBack();
+        return;
       }
+
+      setHotel(data);
     } catch (error) {
       console.error('Fetch Error:', error);
       Alert.alert('Connection Error', 'Could not connect to the server.');
-      router.back();
+      handleBack();
     } finally {
       setLoading(false);
     }
-  };
+  }, [handleBack, id]);
+
+  useEffect(() => {
+    fetchHotelDetails();
+  }, [fetchHotelDetails]);
+
+  const availabilityLabel = useMemo(() => {
+    if (!hotel) return '';
+    if (!hotel.isAvailable || hotel.availableRooms < 1) return 'Sold out';
+    if (hotel.availableRooms === 1) return '1 room left';
+    return `${hotel.availableRooms} rooms left`;
+  }, [hotel]);
+
+  const availabilityTone = useMemo(() => {
+    if (!hotel || !hotel.isAvailable || hotel.availableRooms < 1) return styles.availabilityDanger;
+    if (hotel.availableRooms <= 3) return styles.availabilityWarn;
+    return styles.availabilityGood;
+  }, [hotel]);
 
   if (loading) {
     return (
       <SafeAreaView style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#003580" />
+        <ActivityIndicator size="large" color="#0F4C81" />
       </SafeAreaView>
     );
   }
@@ -63,104 +122,150 @@ export default function HotelDetailsScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView bounces={false}>
-        <View style={styles.imageContainer}>
+      <ScrollView bounces={false} contentContainerStyle={styles.scrollContent}>
+        <View style={styles.hero}>
           {hotel.image ? (
-            <Image 
-              source={{ uri: hotel.image }} 
-              style={styles.image} 
-              contentFit="cover"
-            />
+            <Image source={{ uri: hotel.image }} style={styles.heroImage} contentFit="cover" />
           ) : (
-            <View style={styles.noImage}>
-              <Ionicons name="image-outline" size={64} color="#CCC" />
-              <Text style={styles.noImageText}>No Image Available</Text>
+            <View style={styles.heroPlaceholder}>
+              <Ionicons name="image-outline" size={64} color="#CBD5E1" />
+              <Text style={styles.heroPlaceholderText}>Preview unavailable</Text>
             </View>
           )}
-          <TouchableOpacity 
-            style={styles.backButtonAbsolute} 
-            onPress={() => router.push('/hotels')}
-          >
-            <Ionicons name="arrow-back" size={24} color="#FFF" />
-          </TouchableOpacity>
+          <View style={styles.heroOverlay} />
+
+          <View style={styles.heroTopBar}>
+            <TouchableOpacity style={styles.heroIconButton} onPress={handleBack}>
+              <Ionicons name="arrow-back" size={20} color="#FFF" />
+            </TouchableOpacity>
+            <View style={styles.heroTopActions}>
+              <View style={styles.heroTag}>
+                <Text style={styles.heroTagText}>{hotel.accommodationType}</Text>
+              </View>
+              <TouchableOpacity style={styles.heroIconButton} onPress={() => router.push('/')}>
+                <Ionicons name="home-outline" size={18} color="#FFF" />
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          <View style={styles.heroContent}>
+            <Text style={styles.heroTitle}>{hotel.name}</Text>
+            <View style={styles.heroMetaRow}>
+              <Ionicons name="location-outline" size={16} color="#E2E8F0" />
+              <Text style={styles.heroMetaText}>{hotel.location}</Text>
+            </View>
+            <View style={styles.heroSummaryRow}>
+              <View style={styles.heroPriceBlock}>
+                <Text style={styles.heroPrice}>{formatPrice(hotel.pricePerNight)}</Text>
+                <Text style={styles.heroPriceLabel}>per night</Text>
+              </View>
+              <View style={[styles.availabilityPill, availabilityTone]}>
+                <Ionicons
+                  name={hotel.availableRooms > 0 && hotel.isAvailable ? 'checkmark-circle-outline' : 'alert-circle-outline'}
+                  size={16}
+                  color="#FFF"
+                />
+                <Text style={styles.availabilityText}>{availabilityLabel}</Text>
+              </View>
+            </View>
+          </View>
         </View>
 
-        <View style={styles.contentContainer}>
-          <View style={styles.headerRow}>
-            <Text style={styles.title}>{hotel.name}</Text>
-            <View style={styles.typeTag}>
-              <Text style={styles.typeText}>{hotel.accommodationType}</Text>
+        <View style={styles.content}>
+          <View style={styles.metricsRow}>
+            <View style={styles.metricItem}>
+              <Ionicons name="bed-outline" size={20} color="#0F4C81" />
+              <Text style={styles.metricValue}>{hotel.totalRooms}</Text>
+              <Text style={styles.metricLabel}>Total rooms</Text>
             </View>
-          </View>
-
-          <Text style={styles.location}>
-            <Ionicons name="location-outline" size={16} /> {hotel.location}
-          </Text>
-
-          <View style={styles.priceRow}>
-            <Text style={styles.price}>LKR {hotel.pricePerNight}</Text>
-            <Text style={styles.perNight}> / night</Text>
-          </View>
-
-          <View style={styles.statsContainer}>
-            <View style={styles.statBox}>
-              <Ionicons name="bed-outline" size={24} color="#003580" />
-              <Text style={styles.statValue}>{hotel.totalRooms}</Text>
-              <Text style={styles.statLabel}>Total Rooms</Text>
+            <View style={styles.metricItem}>
+              <Ionicons name="key-outline" size={20} color="#0F4C81" />
+              <Text style={styles.metricValue}>{hotel.availableRooms}</Text>
+              <Text style={styles.metricLabel}>Available</Text>
             </View>
-            <View style={styles.statBox}>
-              <Ionicons name="key-outline" size={24} color="#2E7D32" />
-              <Text style={[styles.statValue, { color: '#2E7D32' }]}>{hotel.availableRooms}</Text>
-              <Text style={styles.statLabel}>Available</Text>
-            </View>
-            <View style={styles.statBox}>
-              <Ionicons name="star-outline" size={24} color="#F57C00" />
-              <Text style={styles.statValue}>{hotel.rating}</Text>
-              <Text style={styles.statLabel}>Rating</Text>
+            <View style={styles.metricItem}>
+              <Ionicons name="star-outline" size={20} color="#0F4C81" />
+              <Text style={styles.metricValue}>{hotel.rating ?? 0}</Text>
+              <Text style={styles.metricLabel}>Rating</Text>
             </View>
           </View>
 
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Description</Text>
-            <Text style={styles.description}>{hotel.description}</Text>
+            <Text style={styles.sectionEyebrow}>Overview</Text>
+            <Text style={styles.sectionTitle}>Stay profile</Text>
+            <Text style={styles.bodyText}>
+              {hotel.description?.trim() || 'No description has been added for this property yet.'}
+            </Text>
           </View>
 
-          {hotel.amenities && hotel.amenities.length > 0 && (
+          <View style={styles.section}>
+            <Text style={styles.sectionEyebrow}>Planning</Text>
+            <Text style={styles.sectionTitle}>Booking details</Text>
+            <View style={styles.detailList}>
+              <View style={styles.detailRow}>
+                <Text style={styles.detailLabel}>Accommodation</Text>
+                <Text style={styles.detailValue}>{hotel.accommodationType}</Text>
+              </View>
+              <View style={styles.detailRow}>
+                <Text style={styles.detailLabel}>Nightly rate</Text>
+                <Text style={styles.detailValue}>{formatPrice(hotel.pricePerNight)}</Text>
+              </View>
+              <View style={styles.detailRow}>
+                <Text style={styles.detailLabel}>Inventory</Text>
+                <Text style={styles.detailValue}>{hotel.availableRooms} of {hotel.totalRooms} open</Text>
+              </View>
+              {hotel.contactNumber ? (
+                <View style={styles.detailRow}>
+                  <Text style={styles.detailLabel}>Contact</Text>
+                  <Text style={styles.detailValue}>{hotel.contactNumber}</Text>
+                </View>
+              ) : null}
+            </View>
+          </View>
+
+          {hotel.amenities && hotel.amenities.length > 0 ? (
             <View style={styles.section}>
+              <Text style={styles.sectionEyebrow}>Included</Text>
               <Text style={styles.sectionTitle}>Amenities</Text>
-              <View style={styles.amenitiesContainer}>
-                {hotel.amenities.map((amenity: string, index: number) => (
-                  <View key={index} style={styles.amenityTag}>
-                    <Ionicons name="checkmark-circle-outline" size={16} color="#003580" />
+              <View style={styles.amenitiesWrap}>
+                {hotel.amenities.map((amenity, index) => (
+                  <View key={`${amenity}-${index}`} style={styles.amenityChip}>
+                    <Ionicons name="checkmark" size={14} color="#0F4C81" />
                     <Text style={styles.amenityText}>{amenity}</Text>
                   </View>
                 ))}
               </View>
             </View>
-          )}
-
-          {hotel.contactNumber ? (
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Contact</Text>
-              <View style={styles.contactRow}>
-                <Ionicons name="call-outline" size={20} color="#666" />
-                <Text style={styles.contactText}>{hotel.contactNumber}</Text>
-              </View>
-            </View>
           ) : null}
-          
-          <View style={{ height: 40 }} />
         </View>
       </ScrollView>
 
       <View style={styles.footer}>
-        <TouchableOpacity 
-          style={styles.editButton}
-          onPress={() => router.push({ pathname: '/edit-hotel', params: { id: hotel._id } })}
-        >
-          <Ionicons name="create-outline" size={20} color="#FFF" />
-          <Text style={styles.editButtonText}>Edit Details</Text>
-        </TouchableOpacity>
+        {isAdminMode ? (
+          <TouchableOpacity
+            style={styles.primaryButton}
+            onPress={() => router.push({ pathname: '/edit-hotel', params: { id: hotel._id, admin: 'true' } })}
+          >
+            <Ionicons name="create-outline" size={18} color="#FFF" />
+            <Text style={styles.primaryButtonText}>Edit Property</Text>
+          </TouchableOpacity>
+        ) : (
+          <TouchableOpacity
+            style={styles.primaryButton}
+            onPress={() =>
+              router.push({
+                pathname: '/booking',
+                params: {
+                  hotelId: hotel._id,
+                  ...(transportId ? { transportId } : {}),
+                },
+              })
+            }
+          >
+            <Ionicons name="calendar-outline" size={18} color="#FFF" />
+            <Text style={styles.primaryButtonText}>{isSelectionMode ? 'Continue Booking' : 'Book This Stay'}</Text>
+          </TouchableOpacity>
+        )}
       </View>
     </SafeAreaView>
   );
@@ -169,177 +274,285 @@ export default function HotelDetailsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8F9FA',
+    backgroundColor: '#F4F7FB',
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: '#F4F7FB',
   },
-  imageContainer: {
-    width: width,
-    height: width * 0.7,
+  scrollContent: {
+    paddingBottom: 148,
+  },
+  hero: {
     position: 'relative',
+    height: Math.min(width * 0.88, 440),
+    backgroundColor: '#0F172A',
   },
-  image: {
+  heroImage: {
     width: '100%',
     height: '100%',
   },
-  noImage: {
-    width: '100%',
-    height: '100%',
-    backgroundColor: '#EEE',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  noImageText: {
-    color: '#888',
-    marginTop: 10,
-  },
-  backButtonAbsolute: {
-    position: 'absolute',
-    top: Platform.OS === 'ios' ? 50 : 20,
-    left: 20,
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  contentContainer: {
-    padding: 20,
-    backgroundColor: '#FFF',
-    borderTopLeftRadius: 30,
-    borderTopRightRadius: 30,
-    marginTop: -30,
-    minHeight: Dimensions.get('window').height * 0.6,
-  },
-  headerRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 10,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#333',
+  heroPlaceholder: {
     flex: 1,
-    marginRight: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    backgroundColor: '#1E293B',
   },
-  typeTag: {
-    backgroundColor: '#003580',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-  },
-  typeText: {
-    color: '#FFF',
-    fontSize: 12,
+  heroPlaceholderText: {
+    color: '#CBD5E1',
+    fontSize: 14,
     fontWeight: '600',
   },
-  location: {
-    fontSize: 16,
-    color: '#666',
-    marginBottom: 15,
+  heroOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(15, 23, 42, 0.45)',
   },
-  priceRow: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    marginBottom: 20,
-  },
-  price: {
-    fontSize: 26,
-    fontWeight: 'bold',
-    color: '#003580',
-  },
-  perNight: {
-    fontSize: 16,
-    color: '#666',
-  },
-  statsContainer: {
+  heroTopBar: {
+    position: 'absolute',
+    top: Platform.OS === 'ios' ? 56 : 24,
+    left: 20,
+    right: 20,
     flexDirection: 'row',
     justifyContent: 'space-between',
-    backgroundColor: '#F9F9F9',
-    borderRadius: 15,
-    padding: 15,
-    marginBottom: 25,
-  },
-  statBox: {
     alignItems: 'center',
+  },
+  heroIconButton: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: 'rgba(255,255,255,0.16)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
+  },
+  heroTag: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 999,
+    backgroundColor: 'rgba(255,255,255,0.16)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
+  },
+  heroTopActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  heroTagText: {
+    color: '#FFF',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  heroContent: {
+    position: 'absolute',
+    left: 20,
+    right: 20,
+    bottom: 24,
+    gap: 10,
+  },
+  heroTitle: {
+    fontSize: 28,
+    fontWeight: '800',
+    color: '#FFF',
+  },
+  heroMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  heroMetaText: {
+    flex: 1,
+    fontSize: 15,
+    color: '#E2E8F0',
+  },
+  heroSummaryRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-end',
+    gap: 12,
+    marginTop: 4,
+  },
+  heroPriceBlock: {
     flex: 1,
   },
-  statValue: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
-    marginTop: 5,
+  heroPrice: {
+    fontSize: 24,
+    fontWeight: '800',
+    color: '#FFF',
   },
-  statLabel: {
-    fontSize: 12,
-    color: '#666',
+  heroPriceLabel: {
+    color: '#CBD5E1',
+    fontSize: 13,
     marginTop: 2,
   },
+  availabilityPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    borderRadius: 999,
+  },
+  availabilityGood: {
+    backgroundColor: 'rgba(5, 150, 105, 0.92)',
+  },
+  availabilityWarn: {
+    backgroundColor: 'rgba(217, 119, 6, 0.92)',
+  },
+  availabilityDanger: {
+    backgroundColor: 'rgba(185, 28, 28, 0.92)',
+  },
+  availabilityText: {
+    color: '#FFF',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  content: {
+    paddingHorizontal: 20,
+    paddingTop: 22,
+    gap: 28,
+  },
+  metricsRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  metricItem: {
+    flex: 1,
+    backgroundColor: '#FFF',
+    borderRadius: 16,
+    paddingHorizontal: 14,
+    paddingVertical: 16,
+    alignItems: 'center',
+    gap: 6,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  metricValue: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: '#0F172A',
+  },
+  metricLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#64748B',
+    textAlign: 'center',
+  },
   section: {
-    marginBottom: 25,
+    gap: 10,
+  },
+  sectionEyebrow: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#0F4C81',
+    textTransform: 'uppercase',
   },
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 10,
+    fontSize: 22,
+    fontWeight: '800',
+    color: '#0F172A',
   },
-  description: {
+  bodyText: {
     fontSize: 15,
     lineHeight: 24,
-    color: '#555',
+    color: '#475569',
   },
-  amenitiesContainer: {
+  detailList: {
+    backgroundColor: '#FFF',
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    overflow: 'hidden',
+  },
+  detailRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E2E8F0',
+  },
+  detailLabel: {
+    flex: 1,
+    fontSize: 14,
+    color: '#64748B',
+    fontWeight: '600',
+  },
+  detailValue: {
+    flex: 1,
+    fontSize: 14,
+    color: '#0F172A',
+    fontWeight: '700',
+    textAlign: 'right',
+  },
+  amenitiesWrap: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 10,
   },
-  amenityTag: {
+  amenityChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F0F5FA',
+    gap: 8,
     paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 10,
-    gap: 5,
+    paddingVertical: 10,
+    borderRadius: 999,
+    backgroundColor: '#EAF2FF',
+    borderWidth: 1,
+    borderColor: '#C7DBF7',
   },
   amenityText: {
-    color: '#333',
     fontSize: 14,
-  },
-  contactRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  contactText: {
-    fontSize: 16,
-    color: '#333',
+    fontWeight: '600',
+    color: '#0F172A',
   },
   footer: {
-    padding: 20,
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    paddingHorizontal: 20,
+    paddingTop: 14,
+    paddingBottom: 20,
+    gap: 10,
     backgroundColor: '#FFF',
     borderTopWidth: 1,
-    borderTopColor: '#EEE',
+    borderTopColor: '#E2E8F0',
   },
-  editButton: {
-    backgroundColor: '#F57C00',
+  primaryButton: {
+    backgroundColor: '#0F4C81',
+    borderRadius: 16,
+    paddingVertical: 16,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 15,
-    borderRadius: 12,
-    gap: 10,
+    gap: 8,
   },
-  editButtonText: {
+  primaryButtonText: {
     color: '#FFF',
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: '700',
+  },
+  secondaryButton: {
+    backgroundColor: '#F8FAFC',
+    borderRadius: 16,
+    paddingVertical: 15,
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  secondaryButtonText: {
+    color: '#0F172A',
+    fontSize: 15,
+    fontWeight: '700',
   },
 });
