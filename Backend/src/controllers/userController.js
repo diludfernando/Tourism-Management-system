@@ -1,5 +1,6 @@
 const User = require('../models/User');
 const generateToken = require('../utils/generateToken');
+const sendEmail = require('../utils/sendEmail');
 
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).{8,}$/;
@@ -468,6 +469,165 @@ const changePassword = async (req, res) => {
   }
 };
 
+// @desc    Forgot password - Request OTP
+// @route   POST /api/users/forgot-password
+// @access  Public
+const forgotPassword = async (req, res) => {
+  try {
+    const { email } = req.body;
+    const normalizedEmail = normalizeEmail(email);
+
+    if (!normalizedEmail) {
+      return res.status(400).json({ message: 'Email is required' });
+    }
+
+    const user = await User.findOne({ email: normalizedEmail });
+    if (!user) {
+      // For security, don't reveal if user exists. Just say "If an account exists..."
+      // But for this app, we'll be direct to help the user.
+      return res.status(404).json({ message: 'No account found with this email' });
+    }
+
+    // Generate 6-digit OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const expires = Date.now() + 10 * 60 * 1000; // 10 minutes
+
+    user.resetPasswordOTP = otp;
+    user.resetPasswordExpires = expires;
+    await user.save();
+
+    // Send the actual email
+    const message = `Your password reset verification code is: ${otp}\n\nThis code will expire in 10 minutes.`;
+    const html = `
+      <div style="font-family: Arial, sans-serif; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
+        <h2 style="color: #003580;">Password Reset Verification</h2>
+        <p>Hello,</p>
+        <p>You requested a password reset. Please use the following 6-digit verification code to proceed:</p>
+        <div style="background: #f4f4f4; padding: 15px; font-size: 24px; font-weight: bold; text-align: center; letter-spacing: 5px; color: #003580; margin: 20px 0;">
+          ${otp}
+        </div>
+        <p>This code is valid for <strong>10 minutes</strong>. If you did not request this reset, please ignore this email.</p>
+        <br/>
+        <p>Best regards,<br/>Tourism Management Team</p>
+      </div>
+    `;
+
+    try {
+      await sendEmail({
+        email: user.email,
+        subject: 'Password Reset Verification Code',
+        message,
+        html,
+      });
+
+      res.json({ message: 'Verification code sent to your email' });
+    } catch (emailError) {
+      console.error('Email sending failed:', emailError);
+      
+      // Fallback: Still log it to console so it's not broken during dev
+      console.log('--- FALLBACK OTP (Email Failed) ---');
+      console.log(`OTP for ${user.email}: ${otp}`);
+      console.log('-----------------------------------');
+      
+      res.json({ 
+        message: 'OTP generated but email failed to send. Check backend console for the code during development.',
+        devCode: otp // You might want to remove this in production
+      });
+    }
+  } catch (error) {
+    console.error('Forgot password error:', error);
+    res.status(500).json({ message: 'Server error during forgot password' });
+  }
+};
+
+// @desc    Verify OTP
+// @route   POST /api/users/verify-otp
+// @access  Public
+const verifyOTP = async (req, res) => {
+  try {
+    const { email, otp } = req.body;
+    const normalizedEmail = normalizeEmail(email);
+
+    if (!normalizedEmail || !otp) {
+      return res.status(400).json({ message: 'Email and OTP are required' });
+    }
+
+    console.log('=== VERIFY OTP REQUEST ===');
+    console.log('Email:', normalizedEmail);
+    console.log('OTP:', otp);
+
+    const user = await User.findOne({
+      email: normalizedEmail,
+      resetPasswordOTP: otp,
+      resetPasswordExpires: { $gt: new Date() },
+    });
+
+    if (!user) {
+      console.log('OTP Verification Failed: User not found or OTP expired/invalid');
+      return res.status(400).json({ message: 'Invalid or expired OTP' });
+    }
+
+    console.log('OTP Verified Successfully for:', normalizedEmail);
+    res.json({ success: true, message: 'OTP verified' });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error during OTP verification' });
+  }
+};
+
+// @desc    Reset password using OTP
+// @route   POST /api/users/reset-password
+// @access  Public
+const resetPasswordWithOTP = async (req, res) => {
+  try {
+    const { email, otp, newPassword } = req.body;
+    const normalizedEmail = normalizeEmail(email);
+
+    if (!normalizedEmail || !otp || !newPassword) {
+      return res.status(400).json({ message: 'Email, OTP and new password are required' });
+    }
+
+    console.log('=== RESET PASSWORD REQUEST ===');
+    console.log('Email:', normalizedEmail);
+    console.log('OTP:', otp);
+
+    const user = await User.findOne({
+      email: normalizedEmail,
+      resetPasswordOTP: otp
+    });
+
+    if (!user) {
+      console.log('Reset Failed: User with this email and OTP not found in DB');
+      return res.status(400).json({ message: 'Invalid or expired OTP' });
+    }
+
+    const now = new Date();
+    console.log('Current Time:', now.toISOString());
+    console.log('OTP Expiry:', user.resetPasswordExpires ? user.resetPasswordExpires.toISOString() : 'MISSING');
+
+    if (!user.resetPasswordExpires || user.resetPasswordExpires < now) {
+      console.log('Reset Failed: OTP has expired');
+      return res.status(400).json({ message: 'Invalid or expired OTP' });
+    }
+
+    console.log('Reset Verification Successful for:', normalizedEmail);
+
+    if (!passwordRegex.test(newPassword)) {
+      return res.status(400).json({
+        message: 'Password must be 8+ chars with uppercase, lowercase, number, and special character',
+      });
+    }
+
+    user.password = newPassword;
+    user.resetPasswordOTP = null;
+    user.resetPasswordExpires = null;
+    await user.save();
+
+    res.json({ message: 'Password reset successfully. You can now login.' });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error during password reset' });
+  }
+};
+
 module.exports = {
   authUser,
   registerUser,
@@ -478,4 +638,7 @@ module.exports = {
   getUserById,
   updateUser,
   changePassword,
+  forgotPassword,
+  verifyOTP,
+  resetPasswordWithOTP,
 };

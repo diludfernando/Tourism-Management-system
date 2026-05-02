@@ -2,7 +2,7 @@ const express = require('express');
 const multer = require('multer');
 const path = require('path');
 const router = express.Router();
-const { authUser, registerUser, getUsers, deleteUser, getCurrentUser, updateProfile, getUserById, updateUser, changePassword } = require('../controllers/userController');
+const { authUser, registerUser, getUsers, deleteUser, getCurrentUser, updateProfile, getUserById, updateUser, changePassword, forgotPassword, verifyOTP, resetPasswordWithOTP } = require('../controllers/userController');
 const { protect, adminOnly } = require('../middleware/authMiddleware');
 
 // Configure multer for file uploads
@@ -45,6 +45,15 @@ router.put('/me', protect, upload.single('profilePhoto'), updateProfile);
 
 // PUT /api/users/change-password
 router.put('/change-password', protect, changePassword);
+
+// POST /api/users/forgot-password - Public
+router.post('/forgot-password', forgotPassword);
+
+// POST /api/users/verify-otp - Public
+router.post('/verify-otp', verifyOTP);
+
+// POST /api/users/reset-password - Public
+router.post('/reset-password', resetPasswordWithOTP);
 
 // GET /api/users
 router.get('/', protect, adminOnly, getUsers);
