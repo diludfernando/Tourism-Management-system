@@ -721,6 +721,7 @@ export default function UserProfileScreen() {
             )}
 
             <View style={{ height: 30 }} />
+          </View>
         )}
 
         {user && activeTab === 'reviews' && (
