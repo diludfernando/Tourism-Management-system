@@ -20,6 +20,7 @@ type TourPack = {
   description: string;
   price: number;
   duration: number;
+  distance?: number;
   destination: string;
   maxGroupSize: number;
   image: string;
@@ -182,6 +183,13 @@ export default function AdminTourPackDetailScreen() {
             <Text style={styles.statValue}>{tourPack.duration}</Text>
             <Text style={styles.statLabel}>Days</Text>
           </View>
+          {tourPack.distance ? (
+            <View style={styles.statCard}>
+              <Ionicons name="map-outline" size={24} color="#003580" />
+              <Text style={styles.statValue}>{tourPack.distance}</Text>
+              <Text style={styles.statLabel}>KM</Text>
+            </View>
+          ) : null}
           <View style={styles.statCard}>
             <Ionicons name="people-outline" size={24} color="#003580" />
             <Text style={styles.statValue}>{tourPack.maxGroupSize}</Text>

@@ -32,6 +32,7 @@ type TourPack = {
   rating?: number;
   price: number;
   duration: number;
+  distance?: number;
   category?: string;
   featured?: boolean;
 };
@@ -140,7 +141,7 @@ export default function Explore() {
 
         <View style={styles.availabilityBadge}>
           <Text style={styles.availabilityText}>
-            {item.duration} Days
+            {item.duration}D {item.distance ? `• ${item.distance}km` : ''}
           </Text>
         </View>
 

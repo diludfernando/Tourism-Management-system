@@ -5,6 +5,7 @@ const tourPackSchema = new mongoose.Schema({
   description: { type: String, required: [true, 'Description is required'] },
   price: { type: Number, required: [true, 'Price is required'], min: 0 },
   duration: { type: Number, required: [true, 'Duration is required'] },
+  distance: { type: Number, required: [true, 'Distance is required'], min: 0 },
   maxGroupSize: { type: Number, default: 10 },
   destination: { type: String, required: [true, 'Destination is required'] },
   inclusions: { type: [String], default: [] },

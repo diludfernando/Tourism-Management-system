@@ -21,7 +21,7 @@ export default function AdminCreateTourPackScreen() {
   const [gallery, setGallery] = useState<any[]>([]);
   const [form, setForm] = useState({
     name: '', description: '', price: '',
-    duration: '', maxGroupSize: '', destination: '',
+    duration: '', distance: '', maxGroupSize: '', destination: '',
     inclusions: '', availabilityDates: [] as string[],
     category: '', tags: '', featured: false, difficulty: 'moderate',
   });
@@ -130,6 +130,7 @@ export default function AdminCreateTourPackScreen() {
     if (!form.description.trim()) e.description = 'Description is required';
     if (!form.price || isNaN(Number(form.price))) e.price = 'Enter a valid price';
     if (!form.duration || isNaN(Number(form.duration))) e.duration = 'Enter valid duration';
+    if (!form.distance || isNaN(Number(form.distance))) e.distance = 'Enter valid distance';
     if (!form.destination.trim()) e.destination = 'Destination is required';
     setErrors(e);
     return Object.keys(e).length === 0;
@@ -146,6 +147,7 @@ export default function AdminCreateTourPackScreen() {
       formData.append('description', form.description);
       formData.append('price', form.price);
       formData.append('duration', form.duration);
+      formData.append('distance', form.distance);
       formData.append('maxGroupSize', form.maxGroupSize || '10');
       formData.append('destination', form.destination);
       formData.append('category', form.category);
@@ -285,7 +287,7 @@ export default function AdminCreateTourPackScreen() {
                 keyboardType="numeric"
               />
             </View>
-            <View style={{ width: 20 }} />
+            <View style={{ width: 10 }} />
             <View style={{ flex: 1 }}>
               <Text style={styles.label}>Duration (Days) *</Text>
               <TextInput
@@ -293,6 +295,17 @@ export default function AdminCreateTourPackScreen() {
                 placeholder="3"
                 value={form.duration}
                 onChangeText={value => update('duration', value)}
+                keyboardType="numeric"
+              />
+            </View>
+            <View style={{ width: 10 }} />
+            <View style={{ flex: 1 }}>
+              <Text style={styles.label}>Distance (km) *</Text>
+              <TextInput
+                style={[styles.input, errors.distance && styles.inputError]}
+                placeholder="150"
+                value={form.distance}
+                onChangeText={value => update('distance', value)}
                 keyboardType="numeric"
               />
             </View>

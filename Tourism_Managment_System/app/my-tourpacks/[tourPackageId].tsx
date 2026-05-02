@@ -19,6 +19,7 @@ type TourPack = {
   description: string;
   price: number;
   duration: number;
+  distance?: number;
   destination: string;
   maxGroupSize: number;
   image: string;
@@ -128,6 +129,15 @@ export default function TourPackDetailScreen() {
             <Text style={styles.statLabel}>Days</Text>
           </View>
           <View style={styles.statDivider} />
+          {tourPack.distance ? (
+            <>
+              <View style={styles.statItem}>
+                <Text style={styles.statValue}>{tourPack.distance}</Text>
+                <Text style={styles.statLabel}>KM</Text>
+              </View>
+              <View style={styles.statDivider} />
+            </>
+          ) : null}
           <View style={styles.statItem}>
             <Text style={styles.statValue}>{tourPack.maxGroupSize}</Text>
             <Text style={styles.statLabel}>Max Group</Text>
