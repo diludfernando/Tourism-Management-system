@@ -8,6 +8,11 @@ const bookingSchema = mongoose.Schema(
       unique: true,
       trim: true,
     },
+    user: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: false,
+    },
     guestName: {
       type: String,
       required: [true, 'Guest name is required'],

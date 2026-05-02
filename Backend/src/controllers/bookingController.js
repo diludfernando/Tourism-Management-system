@@ -172,6 +172,7 @@ const createBooking = async (req, res) => {
 
     const booking = await Booking.create({
       bookingReference: generateReference(),
+      user: req.user ? req.user._id : null,
       guestName: normalizedGuestName,
       email: normalizedEmail,
       phone: normalizedPhone,
@@ -222,6 +223,12 @@ const getBookingById = async (req, res) => {
     if (!booking) {
       return res.status(404).json({ message: 'Booking not found' });
     }
+
+    // Check if user is admin or the owner of the booking
+    if (req.user.role !== 'admin' && booking.user && booking.user.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ message: 'Not authorized to view this booking' });
+    }
+
     res.json(booking);
   } catch (error) {
     res.status(500).json({ message: error.message });

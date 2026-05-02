@@ -17,6 +17,7 @@ import {
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { API_BASE } from '../src/config';
+import { getAuthHeaders } from '../src/auth';
 
 const API_URL = API_BASE;
 const TRAVEL_STYLES = ['Relax', 'Adventure', 'Family', 'Luxury', 'Work'] as const;
@@ -446,9 +447,10 @@ export default function BookingScreen() {
 
     setSaving(true);
     try {
+      const headers = await getAuthHeaders({ 'Content-Type': 'application/json' });
       const response = await fetch(`${API_BASE}/api/bookings`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({
           ...formData,
           hotel: hotelId || null,

@@ -13,6 +13,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import { API_BASE } from '../src/config';
+import { getAuthHeaders } from '../src/auth';
 
 type Booking = {
   _id: string;
@@ -80,7 +81,8 @@ export default function ReceiptScreen() {
     }
 
     try {
-      const response = await fetch(`${API_BASE}/api/bookings/${bookingId}`);
+      const headers = await getAuthHeaders();
+      const response = await fetch(`${API_BASE}/api/bookings/${bookingId}`, { headers });
       const data = await response.json();
 
       if (response.ok) {
