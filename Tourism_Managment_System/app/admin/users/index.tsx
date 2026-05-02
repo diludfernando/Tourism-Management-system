@@ -297,7 +297,7 @@ export default function AdminUsersScreen() {
               <View style={styles.actionButtonsRow}>
                 <TouchableOpacity
                   style={styles.viewButton}
-                  onPress={() => router.push({ pathname: `/admin/users/${user._id}` })}
+                  onPress={() => router.push(`/admin/users/${user._id}` as any)}
                 >
                   <Ionicons name="eye-outline" size={16} color="#003580" />
                   <Text style={styles.viewButtonText}>View Details</Text>
