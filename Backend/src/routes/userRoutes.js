@@ -2,7 +2,7 @@ const express = require('express');
 const multer = require('multer');
 const path = require('path');
 const router = express.Router();
-const { authUser, registerUser, getUsers, deleteUser, getCurrentUser, updateProfile, getUserById, updateUser } = require('../controllers/userController');
+const { authUser, registerUser, getUsers, deleteUser, getCurrentUser, updateProfile, getUserById, updateUser, changePassword } = require('../controllers/userController');
 const { protect, adminOnly } = require('../middleware/authMiddleware');
 
 // Configure multer for file uploads
@@ -42,6 +42,9 @@ router.get('/me', protect, getCurrentUser);
 
 // PUT /api/users/me - update profile with file upload
 router.put('/me', protect, upload.single('profilePhoto'), updateProfile);
+
+// PUT /api/users/change-password
+router.put('/change-password', protect, changePassword);
 
 // GET /api/users
 router.get('/', protect, adminOnly, getUsers);

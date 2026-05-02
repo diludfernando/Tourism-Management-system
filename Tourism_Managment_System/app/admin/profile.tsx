@@ -39,6 +39,13 @@ export default function AdminProfileScreen() {
   const [editedPhone, setEditedPhone] = useState('');
   const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null);
 
+  // Password change states
+  const [showPasswordSection, setShowPasswordSection] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+
   useEffect(() => {
     const checkRoleAndFetch = async () => {
       const role = await getAuthRole();
@@ -173,11 +180,66 @@ export default function AdminProfileScreen() {
     }
   };
 
+  const handleChangePassword = async () => {
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      Alert.alert('Error', 'All password fields are required');
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      Alert.alert('Error', 'New passwords do not match');
+      return;
+    }
+
+    if (newPassword.length < 8) {
+      Alert.alert('Error', 'New password must be at least 8 characters long');
+      return;
+    }
+
+    try {
+      setIsChangingPassword(true);
+      const token = await getAuthToken();
+
+      const response = await fetch(`${API_BASE}/api/users/change-password`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          currentPassword,
+          newPassword,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to change password');
+      }
+
+      Alert.alert('Success', 'Password updated successfully');
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+      setShowPasswordSection(false);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to change password';
+      Alert.alert('Error', message);
+    } finally {
+      setIsChangingPassword(false);
+    }
+  };
+
   const handleCancel = () => {
     setEditedName(user?.name || '');
     setEditedPhone(user?.phoneNumber || '');
     setSelectedPhoto(null);
     setIsEditing(false);
+    setShowPasswordSection(false);
+    setCurrentPassword('');
+    setNewPassword('');
+    setConfirmPassword('');
   };
 
   const handleLogout = async () => {
@@ -337,6 +399,68 @@ export default function AdminProfileScreen() {
                 >
                   <Text style={styles.saveButtonText}>{isSaving ? 'Saving...' : 'Save Changes'}</Text>
                 </TouchableOpacity>
+
+                {/* Password Reset Section Toggle */}
+                <TouchableOpacity 
+                  style={styles.passwordToggle} 
+                  onPress={() => setShowPasswordSection(!showPasswordSection)}
+                >
+                  <Text style={styles.passwordToggleText}>
+                    {showPasswordSection ? 'Cancel Password Change' : 'Change Password'}
+                  </Text>
+                </TouchableOpacity>
+
+                {showPasswordSection && (
+                  <View style={styles.passwordSection}>
+                    <Text style={styles.passwordSectionTitle}>Update Admin Password</Text>
+                    
+                    <View style={styles.formGroup}>
+                      <Text style={styles.label}>Current Password</Text>
+                      <TextInput
+                        style={styles.input}
+                        placeholder="Enter current password"
+                        value={currentPassword}
+                        onChangeText={setCurrentPassword}
+                        secureTextEntry
+                        placeholderTextColor="#999"
+                      />
+                    </View>
+
+                    <View style={styles.formGroup}>
+                      <Text style={styles.label}>New Password</Text>
+                      <TextInput
+                        style={styles.input}
+                        placeholder="Min. 8 characters"
+                        value={newPassword}
+                        onChangeText={setNewPassword}
+                        secureTextEntry
+                        placeholderTextColor="#999"
+                      />
+                    </View>
+
+                    <View style={styles.formGroup}>
+                      <Text style={styles.label}>Confirm New Password</Text>
+                      <TextInput
+                        style={styles.input}
+                        placeholder="Re-type new password"
+                        value={confirmPassword}
+                        onChangeText={setConfirmPassword}
+                        secureTextEntry
+                        placeholderTextColor="#999"
+                      />
+                    </View>
+
+                    <TouchableOpacity
+                      style={[styles.changePasswordButton, isChangingPassword && styles.buttonDisabled]}
+                      onPress={handleChangePassword}
+                      disabled={isChangingPassword}
+                    >
+                      <Text style={styles.changePasswordButtonText}>
+                        {isChangingPassword ? 'Updating...' : 'Update Password'}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
               </View>
             ) : (
               <>
@@ -647,6 +771,40 @@ const styles = StyleSheet.create({
   logoutButtonText: {
     color: '#fff',
     fontSize: 16,
+    fontWeight: '700',
+  },
+  passwordToggle: {
+    marginTop: 20,
+    paddingVertical: 10,
+    alignItems: 'center',
+  },
+  passwordToggleText: {
+    color: '#FF6B35',
+    fontWeight: '600',
+    fontSize: 15,
+  },
+  passwordSection: {
+    marginTop: 15,
+    paddingTop: 15,
+    borderTopWidth: 1,
+    borderTopColor: '#eee',
+  },
+  passwordSectionTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#333',
+    marginBottom: 15,
+  },
+  changePasswordButton: {
+    backgroundColor: '#FF6B35',
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginTop: 10,
+  },
+  changePasswordButtonText: {
+    color: '#fff',
+    fontSize: 15,
     fontWeight: '700',
   },
 });
