@@ -36,7 +36,6 @@ export default function AdminUsersScreen() {
   const [users, setUsers] = useState<UserItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchText, setSearchText] = useState('');
-  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [hasVerifiedRole, setHasVerifiedRole] = useState(false);
   const [currentAdminId, setCurrentAdminId] = useState<string | null>(null);
   const [activeFilter, setActiveFilter] = useState<'all' | 'admin' | 'user'>('all');
@@ -119,48 +118,7 @@ export default function AdminUsersScreen() {
   const adminCount = useMemo(() => users.filter((user) => user.role === 'admin').length, [users]);
   const userCount = useMemo(() => users.length - adminCount, [users.length, adminCount]);
 
-  const deleteUser = async (user: UserItem) => {
-    Alert.alert(
-      'Delete user',
-      `Remove ${user.name} from the system?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              setDeletingId(user._id);
-              const headers = await getAuthHeaders();
-              const response = await fetch(`${API_URL}/${user._id}`, {
-                method: 'DELETE',
-                headers,
-              });
-              const raw = await response.text();
-              let data: any = {};
-              try {
-                data = raw ? JSON.parse(raw) : {};
-              } catch {
-                data = {};
-              }
 
-              if (!response.ok) {
-                Alert.alert('Error', data?.message || 'Failed to delete user');
-                return;
-              }
-
-              await loadUsers();
-              Alert.alert('Success', data?.message || 'User deleted successfully');
-            } catch {
-              Alert.alert('Error', 'Unable to connect to server');
-            } finally {
-              setDeletingId(null);
-            }
-          },
-        },
-      ]
-    );
-  };
 
   if (!hasVerifiedRole) {
     return null;
@@ -302,22 +260,6 @@ export default function AdminUsersScreen() {
                   <Ionicons name="eye-outline" size={16} color="#003580" />
                   <Text style={styles.viewButtonText}>View Details</Text>
                 </TouchableOpacity>
-                {user._id !== currentAdminId && (
-                  <TouchableOpacity
-                    style={[styles.deleteButton, deletingId === user._id && styles.deleteButtonDisabled]}
-                    onPress={() => deleteUser(user)}
-                    disabled={deletingId === user._id}
-                  >
-                    {deletingId === user._id ? (
-                      <ActivityIndicator color="#FFF" size="small" />
-                    ) : (
-                      <Ionicons name="trash-outline" size={16} color="#FFF" />
-                    )}
-                    <Text style={styles.deleteButtonText}>
-                      {deletingId === user._id ? 'Deleting...' : 'Delete'}
-                    </Text>
-                  </TouchableOpacity>
-                )}
               </View>
             </View>
           ))
