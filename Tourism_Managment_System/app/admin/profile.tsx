@@ -388,20 +388,7 @@ export default function AdminProfileScreen() {
             )}
 
             {/* Action Buttons */}
-            {!isEditing && (
-              <View style={styles.buttonContainer}>
-                <TouchableOpacity 
-                  activeOpacity={0.7}
-                  style={styles.logoutButton} 
-                  onPress={() => {
-                    console.log('Logout button pressed');
-                    handleLogout();
-                  }}
-                >
-                  <Text style={styles.logoutButtonText}>Logout</Text>
-                </TouchableOpacity>
-              </View>
-            )}
+
 
             <View style={{ height: 30 }} />
           </View>
