@@ -163,7 +163,14 @@ const createBooking = async (req, res) => {
       if (parsedGuests > transportation.capacity) {
         return res.status(400).json({ message: 'Selected transportation cannot accommodate all guests' });
       }
+      
       transportationAmount = transportation.price;
+      if (tourPackId) {
+        const tourPack = await TourPack.findById(tourPackId);
+        if (tourPack && tourPack.distance) {
+          transportationAmount = transportation.price * tourPack.distance;
+        }
+      }
     }
 
     const baseAmount = stayAmount + packageAmount;

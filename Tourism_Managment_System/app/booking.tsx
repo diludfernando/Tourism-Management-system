@@ -297,7 +297,9 @@ export default function BookingScreen() {
 
     const stayAmount = hotel ? nights * rooms * hotel.pricePerNight : 0;
     const packageAmount = tourPack ? tourPack.price * guests : 0;
-    const transportAmount = selectedVehicle?.price || 0;
+    const transportAmount = tourPack && tourPack.distance && selectedVehicle
+      ? selectedVehicle.price * tourPack.distance
+      : selectedVehicle?.price || 0;
     const serviceFee = Math.round((stayAmount + packageAmount) * 0.08);
     const total = stayAmount + packageAmount + transportAmount + serviceFee;
 
