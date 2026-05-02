@@ -117,6 +117,9 @@ const registerUser = async (req, res) => {
       res.status(400).json({ message: 'Invalid user data' });
     }
   } catch (error) {
+    console.error('Registration error:', error);
+
+    // Duplicate key error (MongoDB code 11000)
     if (error && error.code === 11000) {
       if (error.keyPattern && error.keyPattern.email) {
         return res.status(400).json({ message: 'Email is already in use' });
@@ -124,7 +127,16 @@ const registerUser = async (req, res) => {
       if (error.keyPattern && error.keyPattern.phoneNumber) {
         return res.status(400).json({ message: 'Phone number is already in use' });
       }
+      const field = Object.keys(error.keyPattern)[0];
+      return res.status(400).json({ message: `${field} is already in use` });
     }
+
+    // Mongoose validation error
+    if (error.name === 'ValidationError') {
+      const messages = Object.values(error.errors).map((err) => err.message);
+      return res.status(400).json({ message: messages.join(', ') });
+    }
+
     res.status(500).json({ message: 'Server error during registration' });
   }
 };
@@ -232,7 +244,7 @@ const updateProfile = async (req, res) => {
         // Only check for duplicates if phone is actually changing
         const existingPhone = await User.findOne({ phoneNumber: normalizedPhoneNumber });
         console.log('Existing phone check:', { found: !!existingPhone, existingId: existingPhone?._id, currentId: user._id });
-        
+
         if (existingPhone && String(existingPhone._id) !== String(user._id)) {
           console.log('Phone already in use by another user');
           return res.status(400).json({ message: 'Phone number is already in use' });
@@ -271,8 +283,8 @@ const updateProfile = async (req, res) => {
     const updatedUser = await User.findByIdAndUpdate(
       req.user._id,
       updateData,
-      { 
-        new: true, 
+      {
+        new: true,
         runValidators: true,
         context: 'query'
       }
@@ -288,18 +300,18 @@ const updateProfile = async (req, res) => {
     console.error('Error message:', error.message);
     console.error('Error code:', error.code);
     console.error('Full error:', error);
-    
+
     if (error.code === 11000) {
       console.error('Duplicate key error on fields:', Object.keys(error.keyPattern));
       const field = Object.keys(error.keyPattern)[0];
       return res.status(400).json({ message: `${field} is already in use` });
     }
-    
+
     if (error.name === 'ValidationError') {
       const messages = Object.values(error.errors).map((err) => err.message);
       return res.status(400).json({ message: messages.join(', ') });
     }
-    
+
     res.status(500).json({ message: 'Server error while updating profile' });
   }
 };
@@ -383,7 +395,7 @@ const updateUser = async (req, res) => {
 
       if (normalizedPhoneNumber !== user.phoneNumber) {
         const existingPhone = await User.findOne({ phoneNumber: normalizedPhoneNumber });
-        
+
         if (existingPhone && String(existingPhone._id) !== String(user._id)) {
           return res.status(400).json({ message: 'Phone number is already in use' });
         }

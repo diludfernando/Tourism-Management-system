@@ -9,6 +9,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import { API_BASE } from '../../src/config';
+import { getAuthToken } from '../../src/auth';
 
 const { height, width } = Dimensions.get('window');
 
@@ -45,6 +46,7 @@ export default function TourPackDetailScreen() {
 
   useEffect(() => {
     const fetchTourPack = async () => {
+
       if (!currentTourPackId) {
         setError('Tour pack ID is missing.');
         setLoading(false);
@@ -327,7 +329,17 @@ export default function TourPackDetailScreen() {
         <TouchableOpacity
           style={styles.bookBtn}
           activeOpacity={0.85}
-          onPress={() => {
+          onPress={async () => {
+            const token = await getAuthToken();
+            if (!token) {
+              Alert.alert(
+                "Sign In Required",
+                "Please sign in to book this tour package.",
+                [{ text: "OK", onPress: () => router.push("/login") }]
+              );
+              return;
+            }
+
             if (persons > tourPack.maxGroupSize) {
               Alert.alert('Invalid Group Size', `This tour only supports up to ${tourPack.maxGroupSize} persons.`);
               return;

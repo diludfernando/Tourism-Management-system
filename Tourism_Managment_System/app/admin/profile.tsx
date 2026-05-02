@@ -186,7 +186,7 @@ export default function AdminProfileScreen() {
         text: 'Logout',
         onPress: async () => {
           await clearAuthSession();
-          router.replace('/login');
+          router.replace('/');
         },
       },
     ]);
@@ -221,7 +221,7 @@ export default function AdminProfileScreen() {
             style={styles.headerButton}
             onPress={() => {
               console.log('Back button pressed');
-              router.push('/admin');
+              router.push({ pathname: '/admin', params: { admin: 'true' } });
             }}
           >
             <Text style={styles.backButton}>← Back</Text>

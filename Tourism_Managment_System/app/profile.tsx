@@ -191,7 +191,7 @@ export default function UserProfileScreen() {
         text: 'Logout',
         onPress: async () => {
           await clearAuthSession();
-          router.replace('/login');
+          router.replace('/');
         },
       },
     ]);

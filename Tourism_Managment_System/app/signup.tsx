@@ -1,15 +1,15 @@
 import React, { useState } from 'react';
-import { 
-  StyleSheet, 
-  View, 
-  Text, 
-  TextInput, 
-  TouchableOpacity, 
-  SafeAreaView, 
-  KeyboardAvoidingView, 
-  Platform, 
+import {
+  StyleSheet,
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  SafeAreaView,
+  KeyboardAvoidingView,
+  Platform,
   ActivityIndicator,
-  Alert 
+  Alert
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -25,7 +25,7 @@ const phoneRegex = /^\+?[0-9]{10,15}$/;
 
 export default function SignupScreen() {
   const router = useRouter();
-  
+
   const [name, setName] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [email, setEmail] = useState('');
@@ -68,10 +68,10 @@ export default function SignupScreen() {
       setErrorMsg('Passwords do not match.');
       return;
     }
-    
+
     setErrorMsg('');
     setLoading(true);
-    
+
     try {
       const response = await fetch(`${API_URL}/register`, {
         method: 'POST',
@@ -108,7 +108,11 @@ export default function SignupScreen() {
       await saveAuthSession(data.token, data.role);
       console.log('✅ Registration successful:', data.email);
       Alert.alert('Success', 'Account created successfully!');
-      router.replace(data.role === 'admin' ? '/admin' : '/explore');
+      if (data.role === 'admin') {
+        router.replace({ pathname: '/admin', params: { admin: 'true' } });
+      } else {
+        router.replace('/explore');
+      }
     } catch (error) {
       console.error('Signup Error:', error);
       setErrorMsg('Unable to connect to server.');
@@ -131,130 +135,130 @@ export default function SignupScreen() {
         />
         <View style={styles.overlay} />
       </View>
-      
+
       <SafeAreaView style={{ flex: 1 }}>
-        <KeyboardAvoidingView 
+        <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           style={{ flex: 1 }}
         >
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-            <Ionicons name="arrow-back" size={24} color="#FFF" />
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => router.push('/')} style={styles.backButton}>
-            <Ionicons name="home-outline" size={22} color="#FFF" />
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.content}>
-          <View style={styles.titleContainer}>
-            <Text style={styles.welcomeText}>Create an Account</Text>
-            <Text style={styles.subtitleText}>Sign up to start managing your trips</Text>
-          </View>
-
-          {errorMsg ? (
-            <View style={styles.errorContainer}>
-              <Ionicons name="alert-circle-outline" size={20} color="#E53E3E" />
-              <Text style={styles.errorText}>{errorMsg}</Text>
-            </View>
-          ) : null}
-
-          <View style={styles.formContainer}>
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Full Name</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="e.g. Alex Fernando"
-                value={name}
-                onChangeText={(text) => { setName(text); setErrorMsg(''); }}
-                autoCapitalize="words"
-                textContentType="name"
-              />
-            </View>
-
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Phone Number</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="e.g. +94771234567"
-                value={phoneNumber}
-                onChangeText={(text) => { setPhoneNumber(text); setErrorMsg(''); }}
-                keyboardType="phone-pad"
-                autoCapitalize="none"
-                autoCorrect={false}
-                textContentType="telephoneNumber"
-              />
-            </View>
-
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Email Address</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="admin@example.com"
-                value={email}
-                onChangeText={(text) => { setEmail(text); setErrorMsg(''); }}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                autoCorrect={false}
-                textContentType="emailAddress"
-              />
-            </View>
-
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Password</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Create a password"
-                value={password}
-                onChangeText={(text) => { setPassword(text); setErrorMsg(''); }}
-                secureTextEntry
-                autoCapitalize="none"
-                autoCorrect={false}
-                textContentType="newPassword"
-              />
-            </View>
-
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Confirm Password</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Confirm your password"
-                value={confirmPassword}
-                onChangeText={(text) => { setConfirmPassword(text); setErrorMsg(''); }}
-                secureTextEntry
-                autoCapitalize="none"
-                autoCorrect={false}
-                textContentType="newPassword"
-              />
-            </View>
-
-            <Text style={styles.helperText}>
-              Use 8+ characters with uppercase, lowercase, number, and special character.
-            </Text>
-
-            <TouchableOpacity 
-              style={[styles.loginButton, loading && { opacity: 0.8 }]} 
-              onPress={handleSignup}
-              disabled={loading}
-              activeOpacity={0.8}
-            >
-              {loading ? (
-                <ActivityIndicator color="#FFF" />
-              ) : (
-                <Text style={styles.loginButtonText}>Sign Up</Text>
-              
-              )}
+          <View style={styles.header}>
+            <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+              <Ionicons name="arrow-back" size={24} color="#FFF" />
             </TouchableOpacity>
-
-            <View style={styles.footerRow}>
-              <Text style={styles.footerText}>Already have an account? </Text>
-              <TouchableOpacity onPress={() => router.replace('/login')}>
-                <Text style={styles.footerLink}>Sign In</Text>
-              </TouchableOpacity>
-            </View>
-            
+            <TouchableOpacity onPress={() => router.push('/')} style={styles.backButton}>
+              <Ionicons name="home-outline" size={22} color="#FFF" />
+            </TouchableOpacity>
           </View>
-        </View>
+
+          <View style={styles.content}>
+            <View style={styles.titleContainer}>
+              <Text style={styles.welcomeText}>Create an Account</Text>
+              <Text style={styles.subtitleText}>Sign up to start managing your trips</Text>
+            </View>
+
+            {errorMsg ? (
+              <View style={styles.errorContainer}>
+                <Ionicons name="alert-circle-outline" size={20} color="#E53E3E" />
+                <Text style={styles.errorText}>{errorMsg}</Text>
+              </View>
+            ) : null}
+
+            <View style={styles.formContainer}>
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Full Name</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="e.g. Alex Fernando"
+                  value={name}
+                  onChangeText={(text) => { setName(text); setErrorMsg(''); }}
+                  autoCapitalize="words"
+                  textContentType="name"
+                />
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Phone Number</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="e.g. +94771234567"
+                  value={phoneNumber}
+                  onChangeText={(text) => { setPhoneNumber(text); setErrorMsg(''); }}
+                  keyboardType="phone-pad"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  textContentType="telephoneNumber"
+                />
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Email Address</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="admin@example.com"
+                  value={email}
+                  onChangeText={(text) => { setEmail(text); setErrorMsg(''); }}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  textContentType="emailAddress"
+                />
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Password</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Create a password"
+                  value={password}
+                  onChangeText={(text) => { setPassword(text); setErrorMsg(''); }}
+                  secureTextEntry
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  textContentType="newPassword"
+                />
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Confirm Password</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Confirm your password"
+                  value={confirmPassword}
+                  onChangeText={(text) => { setConfirmPassword(text); setErrorMsg(''); }}
+                  secureTextEntry
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  textContentType="newPassword"
+                />
+              </View>
+
+              <Text style={styles.helperText}>
+                Use 8+ characters with uppercase, lowercase, number, and special character.
+              </Text>
+
+              <TouchableOpacity
+                style={[styles.loginButton, loading && { opacity: 0.8 }]}
+                onPress={handleSignup}
+                disabled={loading}
+                activeOpacity={0.8}
+              >
+                {loading ? (
+                  <ActivityIndicator color="#FFF" />
+                ) : (
+                  <Text style={styles.loginButtonText}>Sign Up</Text>
+
+                )}
+              </TouchableOpacity>
+
+              <View style={styles.footerRow}>
+                <Text style={styles.footerText}>Already have an account? </Text>
+                <TouchableOpacity onPress={() => router.replace('/login')}>
+                  <Text style={styles.footerLink}>Sign In</Text>
+                </TouchableOpacity>
+              </View>
+
+            </View>
+          </View>
         </KeyboardAvoidingView>
       </SafeAreaView>
     </View>

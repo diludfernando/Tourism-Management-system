@@ -10,6 +10,7 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  Alert,
 } from 'react-native';
 import { Image } from 'expo-image';
 import { StatusBar } from 'expo-status-bar';
@@ -17,6 +18,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { API_BASE } from '../src/config';
+import { getAuthToken, getAuthRole } from '../src/auth';
 
 const API_URL = `${API_BASE}/api/tourpacks`;
 const { width } = Dimensions.get('window');
@@ -70,7 +72,15 @@ export default function Explore() {
 
   useFocusEffect(
     React.useCallback(() => {
-      fetchPackages();
+      const checkAdmin = async () => {
+        const role = await getAuthRole();
+        if (role === 'admin') {
+          router.replace({ pathname: '/admin', params: { admin: 'true' } });
+          return;
+        }
+        fetchPackages();
+      };
+      checkAdmin();
     }, [])
   );
 
@@ -96,7 +106,9 @@ export default function Explore() {
       <TouchableOpacity
         activeOpacity={0.92}
         style={styles.card}
-        onPress={() => router.push({ pathname: "/my-tourpacks/[tourPackageId]", params: { tourPackageId: item._id } })}
+        onPress={() => {
+          router.push({ pathname: "/my-tourpacks/[tourPackageId]", params: { tourPackageId: item._id } });
+        }}
       >
         {item.image ? (
           <Image source={{ uri: `${API_BASE}${item.image}` }} style={styles.cardImage} contentFit="cover" transition={500} />
