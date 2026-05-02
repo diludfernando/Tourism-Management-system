@@ -31,6 +31,7 @@ export default function UserProfileScreen() {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [editedName, setEditedName] = useState('');
@@ -163,7 +164,10 @@ export default function UserProfileScreen() {
       setUser(updatedUser);
       setSelectedPhoto(null);
       setIsEditing(false);
-      Alert.alert('Success', 'Profile updated successfully');
+      setError('');
+      setSuccess('✓ Profile updated successfully');
+      // Auto-dismiss success message after 3 seconds
+      setTimeout(() => setSuccess(''), 3000);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to update profile';
       Alert.alert('Error', message);
@@ -240,6 +244,12 @@ export default function UserProfileScreen() {
         {error && (
           <View style={styles.errorContainer}>
             <Text style={styles.errorText}>{error}</Text>
+          </View>
+        )}
+
+        {success && (
+          <View style={styles.successContainer}>
+            <Text style={styles.successText}>{success}</Text>
           </View>
         )}
 
@@ -425,6 +435,21 @@ const styles = StyleSheet.create({
   errorText: {
     color: '#c33',
     fontSize: 14,
+  },
+  successContainer: {
+    backgroundColor: '#e8f5e9',
+    marginHorizontal: 16,
+    marginTop: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 8,
+    borderLeftWidth: 4,
+    borderLeftColor: '#4caf50',
+  },
+  successText: {
+    color: '#2e7d32',
+    fontSize: 14,
+    fontWeight: '500',
   },
   profileCard: {
     backgroundColor: '#fff',

@@ -248,23 +248,31 @@ export default function AdminUsersScreen() {
                     Joined {user.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'recently'}
                   </Text>
                 </View>
-                <Text style={styles.updatedText}>Read only profile</Text>
               </View>
 
-              <TouchableOpacity
-                style={[styles.deleteButton, deletingId === user._id && styles.deleteButtonDisabled]}
-                onPress={() => deleteUser(user)}
-                disabled={deletingId === user._id}
-              >
-                {deletingId === user._id ? (
-                  <ActivityIndicator color="#FFF" size="small" />
-                ) : (
-                  <Ionicons name="trash-outline" size={18} color="#FFF" />
-                )}
-                <Text style={styles.deleteButtonText}>
-                  {deletingId === user._id ? 'Deleting...' : 'Delete User'}
-                </Text>
-              </TouchableOpacity>
+              <View style={styles.actionButtonsRow}>
+                <TouchableOpacity
+                  style={styles.viewButton}
+                  onPress={() => router.push({ pathname: `/admin/users/${user._id}` })}
+                >
+                  <Ionicons name="eye-outline" size={16} color="#003580" />
+                  <Text style={styles.viewButtonText}>View Details</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.deleteButton, deletingId === user._id && styles.deleteButtonDisabled]}
+                  onPress={() => deleteUser(user)}
+                  disabled={deletingId === user._id}
+                >
+                  {deletingId === user._id ? (
+                    <ActivityIndicator color="#FFF" size="small" />
+                  ) : (
+                    <Ionicons name="trash-outline" size={16} color="#FFF" />
+                  )}
+                  <Text style={styles.deleteButtonText}>
+                    {deletingId === user._id ? 'Deleting...' : 'Delete'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
             </View>
           ))
         )}
@@ -522,15 +530,35 @@ const styles = StyleSheet.create({
     color: '#6B7280',
     fontSize: 12,
   },
-  deleteButton: {
+  actionButtonsRow: {
+    flexDirection: 'row',
+    gap: 10,
     marginTop: 12,
-    backgroundColor: '#DC2626',
-    borderRadius: 10,
-    paddingVertical: 13,
+  },
+  viewButton: {
+    flex: 1,
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    gap: 6,
+    backgroundColor: '#E0E7FF',
+    borderRadius: 10,
+    paddingVertical: 12,
+  },
+  viewButtonText: {
+    color: '#003580',
+    fontWeight: '700',
+    fontSize: 13,
+  },
+  deleteButton: {
+    flex: 1,
     flexDirection: 'row',
-    gap: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: '#DC2626',
+    borderRadius: 10,
+    paddingVertical: 12,
   },
   deleteButtonDisabled: {
     opacity: 0.75,
@@ -538,5 +566,6 @@ const styles = StyleSheet.create({
   deleteButtonText: {
     color: '#FFF',
     fontWeight: '700',
+    fontSize: 13,
   },
 });

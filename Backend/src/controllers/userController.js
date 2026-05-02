@@ -321,6 +321,103 @@ const getCurrentUser = async (req, res) => {
   }
 };
 
+// @desc    Get a specific user by ID
+// @route   GET /api/users/:id
+// @access  Private/Admin
+const getUserById = async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id).select('-password');
+
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    res.json(user);
+  } catch (error) {
+    res.status(500).json({ message: 'Server error while fetching user' });
+  }
+};
+
+// @desc    Update a specific user
+// @route   PUT /api/users/:id
+// @access  Private/Admin
+const updateUser = async (req, res) => {
+  try {
+    const { name, phoneNumber, role } = req.body;
+    const user = await User.findById(req.params.id);
+
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    const updateData = {};
+
+    // Validate and prepare name update
+    if (name !== undefined && name !== null) {
+      const normalizedName = normalizeName(name);
+
+      if (!normalizedName) {
+        return res.status(400).json({ message: 'Name is required' });
+      }
+
+      if (normalizedName.length < 2 || normalizedName.length > 60) {
+        return res.status(400).json({ message: 'Name must be between 2 and 60 characters' });
+      }
+
+      if (normalizedName !== user.name) {
+        updateData.name = normalizedName;
+      }
+    }
+
+    // Validate and prepare phone update
+    if (phoneNumber !== undefined && phoneNumber !== null) {
+      const normalizedPhoneNumber = normalizePhoneNumber(phoneNumber);
+
+      if (!normalizedPhoneNumber) {
+        return res.status(400).json({ message: 'Phone number is required' });
+      }
+
+      if (!phoneRegex.test(normalizedPhoneNumber)) {
+        return res.status(400).json({ message: 'Please enter a valid phone number' });
+      }
+
+      if (normalizedPhoneNumber !== user.phoneNumber) {
+        const existingPhone = await User.findOne({ phoneNumber: normalizedPhoneNumber });
+        
+        if (existingPhone && String(existingPhone._id) !== String(user._id)) {
+          return res.status(400).json({ message: 'Phone number is already in use' });
+        }
+
+        updateData.phoneNumber = normalizedPhoneNumber;
+      }
+    }
+
+    // Handle role update (admin only can change roles)
+    if (role !== undefined && role !== null) {
+      if (!['user', 'admin'].includes(role)) {
+        return res.status(400).json({ message: 'Invalid role' });
+      }
+
+      if (role !== user.role) {
+        updateData.role = role;
+      }
+    }
+
+    if (Object.keys(updateData).length === 0) {
+      return res.status(400).json({ message: 'No changes provided' });
+    }
+
+    const updatedUser = await User.findByIdAndUpdate(req.params.id, updateData, {
+      new: true,
+      runValidators: true,
+    }).select('-password');
+
+    res.json(updatedUser);
+  } catch (error) {
+    res.status(500).json({ message: 'Server error while updating user' });
+  }
+};
+
 module.exports = {
   authUser,
   registerUser,
@@ -328,4 +425,6 @@ module.exports = {
   deleteUser,
   getCurrentUser,
   updateProfile,
+  getUserById,
+  updateUser,
 };
