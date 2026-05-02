@@ -13,8 +13,8 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
-import { API_BASE } from '@/src/config';
-import { getAuthToken, getAuthRole, clearAuthSession } from '@/src/auth';
+import { API_BASE } from '../src/config';
+import { getAuthToken, getAuthRole, clearAuthSession } from '../src/auth';
 
 interface UserProfile {
   _id: string;
@@ -185,13 +185,21 @@ export default function UserProfileScreen() {
   };
 
   const handleLogout = async () => {
+    console.log('handleLogout called');
     Alert.alert('Logout', 'Are you sure you want to logout?', [
-      { text: 'Cancel', onPress: () => {} },
+      { text: 'Cancel', onPress: () => console.log('Logout cancelled') },
       {
         text: 'Logout',
         onPress: async () => {
-          await clearAuthSession();
-          router.replace('/');
+          try {
+            console.log('Proceeding with logout...');
+            await clearAuthSession();
+            console.log('Auth session cleared, navigating to home...');
+            router.replace('/');
+          } catch (err) {
+            console.error('Logout error:', err);
+            Alert.alert('Error', 'Failed to logout. Please try again.');
+          }
         },
       },
     ]);
