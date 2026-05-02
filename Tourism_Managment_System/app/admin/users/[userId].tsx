@@ -38,6 +38,7 @@ export default function UserDetailsScreen() {
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [deletingUser, setDeletingUser] = useState(false);
+  const [currentAdminId, setCurrentAdminId] = useState<string | null>(null);
 
   // Edit form states
   const [editedName, setEditedName] = useState('');
@@ -59,11 +60,25 @@ export default function UserDetailsScreen() {
           return;
         }
 
+        fetchCurrentAdminId();
         loadUserDetails();
       } catch (err) {
         console.error('Verification error:', err);
         setError('Failed to verify admin access');
         setLoading(false);
+      }
+    };
+
+    const fetchCurrentAdminId = async () => {
+      try {
+        const headers = await getAuthHeaders();
+        const response = await fetch(`${API_BASE}/api/users/me`, { headers });
+        const data = await response.json();
+        if (response.ok && data._id) {
+          setCurrentAdminId(data._id);
+        }
+      } catch (err) {
+        console.error('Failed to fetch current admin ID:', err);
       }
     };
 
@@ -433,30 +448,32 @@ export default function UserDetailsScreen() {
             </View>
 
             {/* Danger Zone */}
-            <View style={styles.dangerSection}>
-              <View style={styles.sectionHeaderView}>
-                <Ionicons name="warning-outline" size={20} color="#DC2626" />
-                <Text style={[styles.sectionTitle, styles.dangerTitle]}>Danger Zone</Text>
-              </View>
-              <Text style={styles.dangerText}>
-                Deleting this user will permanently remove all their data from the system. This action cannot be undone.
-              </Text>
+            {user._id !== currentAdminId && (
+              <View style={styles.dangerSection}>
+                <View style={styles.sectionHeaderView}>
+                  <Ionicons name="warning-outline" size={20} color="#DC2626" />
+                  <Text style={[styles.sectionTitle, styles.dangerTitle]}>Danger Zone</Text>
+                </View>
+                <Text style={styles.dangerText}>
+                  Deleting this user will permanently remove all their data from the system. This action cannot be undone.
+                </Text>
 
-              <TouchableOpacity
-                style={[styles.deleteButton, deletingUser && styles.buttonDisabled]}
-                onPress={handleDeleteUser}
-                disabled={deletingUser}
-              >
-                {deletingUser ? (
-                  <ActivityIndicator color="#FFF" size="small" />
-                ) : (
-                  <>
-                    <Ionicons name="trash-outline" size={18} color="#FFF" />
-                    <Text style={styles.deleteButtonText}>Delete User Account</Text>
-                  </>
-                )}
-              </TouchableOpacity>
-            </View>
+                <TouchableOpacity
+                  style={[styles.deleteButton, deletingUser && styles.buttonDisabled]}
+                  onPress={handleDeleteUser}
+                  disabled={deletingUser}
+                >
+                  {deletingUser ? (
+                    <ActivityIndicator color="#FFF" size="small" />
+                  ) : (
+                    <>
+                      <Ionicons name="trash-outline" size={18} color="#FFF" />
+                      <Text style={styles.deleteButtonText}>Delete User Account</Text>
+                    </>
+                  )}
+                </TouchableOpacity>
+              </View>
+            )}
           </>
         )}
 

@@ -38,6 +38,7 @@ export default function AdminUsersScreen() {
   const [searchText, setSearchText] = useState('');
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [hasVerifiedRole, setHasVerifiedRole] = useState(false);
+  const [currentAdminId, setCurrentAdminId] = useState<string | null>(null);
   const isAdminMode = admin === 'true';
 
   useEffect(() => {
@@ -49,6 +50,20 @@ export default function AdminUsersScreen() {
       }
 
       setHasVerifiedRole(true);
+      fetchCurrentAdminId();
+    };
+
+    const fetchCurrentAdminId = async () => {
+      try {
+        const headers = await getAuthHeaders();
+        const response = await fetch(`${API_BASE}/api/users/me`, { headers });
+        const data = await response.json();
+        if (response.ok && data._id) {
+          setCurrentAdminId(data._id);
+        }
+      } catch (err) {
+        console.error('Failed to fetch current admin ID:', err);
+      }
     };
 
     verifyRole();
@@ -270,20 +285,22 @@ export default function AdminUsersScreen() {
                   <Ionicons name="eye-outline" size={16} color="#003580" />
                   <Text style={styles.viewButtonText}>View Details</Text>
                 </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.deleteButton, deletingId === user._id && styles.deleteButtonDisabled]}
-                  onPress={() => deleteUser(user)}
-                  disabled={deletingId === user._id}
-                >
-                  {deletingId === user._id ? (
-                    <ActivityIndicator color="#FFF" size="small" />
-                  ) : (
-                    <Ionicons name="trash-outline" size={16} color="#FFF" />
-                  )}
-                  <Text style={styles.deleteButtonText}>
-                    {deletingId === user._id ? 'Deleting...' : 'Delete'}
-                  </Text>
-                </TouchableOpacity>
+                {user._id !== currentAdminId && (
+                  <TouchableOpacity
+                    style={[styles.deleteButton, deletingId === user._id && styles.deleteButtonDisabled]}
+                    onPress={() => deleteUser(user)}
+                    disabled={deletingId === user._id}
+                  >
+                    {deletingId === user._id ? (
+                      <ActivityIndicator color="#FFF" size="small" />
+                    ) : (
+                      <Ionicons name="trash-outline" size={16} color="#FFF" />
+                    )}
+                    <Text style={styles.deleteButtonText}>
+                      {deletingId === user._id ? 'Deleting...' : 'Delete'}
+                    </Text>
+                  </TouchableOpacity>
+                )}
               </View>
             </View>
           ))
