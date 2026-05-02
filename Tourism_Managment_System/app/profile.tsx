@@ -10,6 +10,7 @@ import {
   SafeAreaView,
   TextInput,
   Image,
+  Platform,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
@@ -186,23 +187,33 @@ export default function UserProfileScreen() {
 
   const handleLogout = async () => {
     console.log('handleLogout called');
-    Alert.alert('Logout', 'Are you sure you want to logout?', [
-      { text: 'Cancel', onPress: () => console.log('Logout cancelled') },
-      {
-        text: 'Logout',
-        onPress: async () => {
-          try {
-            console.log('Proceeding with logout...');
-            await clearAuthSession();
-            console.log('Auth session cleared, navigating to home...');
-            router.replace('/');
-          } catch (err) {
-            console.error('Logout error:', err);
-            Alert.alert('Error', 'Failed to logout. Please try again.');
-          }
-        },
-      },
-    ]);
+    
+    const performLogout = async () => {
+      try {
+        console.log('Proceeding with logout...');
+        await clearAuthSession();
+        console.log('Auth session cleared, navigating to home...');
+        if (Platform.OS === 'web') {
+          window.location.href = '/';
+        } else {
+          router.replace('/');
+        }
+      } catch (err) {
+        console.error('Logout error:', err);
+        Alert.alert('Error', 'Failed to logout. Please try again.');
+      }
+    };
+
+    if (Platform.OS === 'web') {
+      if (window.confirm('Are you sure you want to logout?')) {
+        await performLogout();
+      }
+    } else {
+      Alert.alert('Logout', 'Are you sure you want to logout?', [
+        { text: 'Cancel', onPress: () => console.log('Logout cancelled') },
+        { text: 'Logout', onPress: performLogout },
+      ]);
+    }
   };
 
   const formatDate = (dateString: string) => {

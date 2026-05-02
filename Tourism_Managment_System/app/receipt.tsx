@@ -127,9 +127,7 @@ export default function ReceiptScreen() {
       <StatusBar style="dark" />
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.push('/')} style={styles.homeButton}>
-            <Ionicons name="home-outline" size={24} color="#0F172A" />
-          </TouchableOpacity>
+          <View style={{ width: 44 }} />
           <Text style={styles.headerTitle}>Booking Receipt</Text>
           <View style={{ width: 44 }} />
         </View>

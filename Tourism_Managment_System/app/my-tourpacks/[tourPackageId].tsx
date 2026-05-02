@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, ScrollView,
   TouchableOpacity, ActivityIndicator, Dimensions, FlatList, Modal,
-  TextInput, Alert
+  TextInput, Alert, Platform
 } from 'react-native';
 import { Image } from 'expo-image';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -332,16 +332,26 @@ export default function TourPackDetailScreen() {
           onPress={async () => {
             const token = await getAuthToken();
             if (!token) {
-              Alert.alert(
-                "Sign In Required",
-                "Please sign in to book this tour package.",
-                [{ text: "OK", onPress: () => router.push("/login") }]
-              );
+              if (Platform.OS === 'web') {
+                if (window.confirm("Sign In Required: Please sign in to book this tour package.")) {
+                  router.push("/login");
+                }
+              } else {
+                Alert.alert(
+                  "Sign In Required",
+                  "Please sign in to book this tour package.",
+                  [{ text: "OK", onPress: () => router.push("/login") }]
+                );
+              }
               return;
             }
 
             if (persons > tourPack.maxGroupSize) {
-              Alert.alert('Invalid Group Size', `This tour only supports up to ${tourPack.maxGroupSize} persons.`);
+              if (Platform.OS === 'web') {
+                window.alert(`Invalid Group Size: This tour only supports up to ${tourPack.maxGroupSize} persons.`);
+              } else {
+                Alert.alert('Invalid Group Size', `This tour only supports up to ${tourPack.maxGroupSize} persons.`);
+              }
               return;
             }
             router.push({

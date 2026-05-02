@@ -237,10 +237,33 @@ export default function BookingScreen() {
       setFormData((prev) => ({
         ...prev,
         adults: persons,
-        children: '0', // Assuming the selection from tour-details is total persons
+        children: '0', 
       }));
     }
   }, [persons]);
+
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      try {
+        const headers = await getAuthHeaders();
+        const response = await fetch(`${API_BASE}/api/users/me`, { headers });
+        const data = await response.json();
+        
+        if (response.ok && data) {
+          setFormData((prev) => ({
+            ...prev,
+            guestName: prev.guestName || data.name || '',
+            email: prev.email || data.email || '',
+            phone: prev.phone || data.phoneNumber || '',
+          }));
+        }
+      } catch (error) {
+        console.error('Error fetching user profile for pre-fill:', error);
+      }
+    };
+
+    fetchUserProfile();
+  }, []);
 
   const checkInDateValue = parseDateString(formData.checkInDate);
   const checkOutDateValue = parseDateString(formData.checkOutDate);

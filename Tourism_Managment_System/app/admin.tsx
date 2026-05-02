@@ -145,7 +145,11 @@ export default function AdminScreen() {
             style={[styles.actionButton, { backgroundColor: '#d32f2f' }]}
             onPress={async () => {
               await clearAuthSession();
-              router.push('/');
+              if (Platform.OS === 'web') {
+                window.location.href = '/';
+              } else {
+                router.replace('/');
+              }
             }}
           >
             <Ionicons name="log-out-outline" size={20} color="#FFF" />

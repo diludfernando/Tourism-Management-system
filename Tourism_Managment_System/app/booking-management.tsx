@@ -451,9 +451,7 @@ export default function BookingManagementScreen() {
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Booking Command Center</Text>
         <View style={styles.headerActions}>
-          <TouchableOpacity onPress={() => router.push('/')} style={styles.iconButton}>
-            <Ionicons name="home-outline" size={20} color="#111827" />
-          </TouchableOpacity>
+
           <TouchableOpacity
             onPress={() => {
               setRefreshing(true);
