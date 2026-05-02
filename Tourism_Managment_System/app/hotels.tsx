@@ -61,7 +61,25 @@ export default function HotelListScreen() {
       const response = await fetch(API_URL);
       const data = await response.json();
       if (response.ok) {
-        setHotels(data);
+        let filteredHotels = data;
+        
+        if (tourPackId) {
+          try {
+            const tpResponse = await fetch(`${API_BASE}/api/tourpacks/${tourPackId}`);
+            const tpData = await tpResponse.json();
+            const destination = tpData.data?.destination || tpData.destination;
+            if (tpResponse.ok && destination) {
+              const dest = destination.toLowerCase();
+              filteredHotels = data.filter((hotel: any) => 
+                hotel.location && hotel.location.toLowerCase().includes(dest)
+              );
+            }
+          } catch (tpError) {
+            console.error('Failed to fetch tour package for filtering:', tpError);
+          }
+        }
+        
+        setHotels(filteredHotels);
       } else {
         Alert.alert('Error', data.message || 'Failed to fetch hotels');
       }

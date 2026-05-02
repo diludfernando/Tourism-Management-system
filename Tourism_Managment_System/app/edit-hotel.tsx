@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  StyleSheet, 
-  View, 
-  Text, 
-  TouchableOpacity, 
-  ScrollView, 
-  SafeAreaView, 
-  TextInput, 
-  KeyboardAvoidingView, 
+import {
+  StyleSheet,
+  View,
+  Text,
+  TouchableOpacity,
+  ScrollView,
+  SafeAreaView,
+  TextInput,
+  KeyboardAvoidingView,
   Platform,
   Alert,
   ActivityIndicator,
@@ -42,7 +42,7 @@ export default function EditHotelScreen() {
   const [hasVerifiedRole, setHasVerifiedRole] = useState(false);
   const [showTypePicker, setShowTypePicker] = useState(false);
   const [image, setImage] = useState<string | null>(null);
-  
+
   const [formData, setFormData] = useState({
     name: '',
     location: '',
@@ -121,12 +121,12 @@ export default function EditHotelScreen() {
   };
 
   const handleUpdate = async () => {
-    const { 
-      name, location, description, pricePerNight, 
-      totalRooms, availableRooms, accommodationType, 
-      contactNumber, amenities 
+    const {
+      name, location, description, pricePerNight,
+      totalRooms, availableRooms, accommodationType,
+      contactNumber, amenities
     } = formData;
-    
+
     if (!name || !location || !description || !pricePerNight || !totalRooms || !availableRooms || !accommodationType) {
       Alert.alert('Required Fields', 'Please fill in all mandatory fields.');
       return;
@@ -166,11 +166,11 @@ export default function EditHotelScreen() {
           'Success',
           'Hotel information updated successfully!',
           [
-            { 
-              text: 'OK', 
+            {
+              text: 'OK',
               onPress: () => {
                 router.push({ pathname: '/hotel-details', params: { id: String(id), admin: 'true' } });
-              } 
+              }
             }
           ]
         );
@@ -213,25 +213,25 @@ export default function EditHotelScreen() {
         </TouchableOpacity>
       </View>
 
-      <KeyboardAvoidingView 
+      <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={{ flex: 1 }}
       >
         <ScrollView contentContainerStyle={styles.scrollContent}>
           <View style={styles.formContainer}>
-            
+
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Accommodation Image</Text>
               <TouchableOpacity style={styles.imagePicker} onPress={pickImage}>
                 {image ? (
                   <View style={styles.imagePreviewContainer}>
-                    <Image 
-                      source={{ uri: image }} 
-                      style={styles.imagePreview} 
+                    <Image
+                      source={{ uri: image }}
+                      style={styles.imagePreview}
                       contentFit="cover"
                     />
-                    <TouchableOpacity 
-                      style={styles.removeImageButton} 
+                    <TouchableOpacity
+                      style={styles.removeImageButton}
                       onPress={() => setImage(null)}
                     >
                       <Ionicons name="close-circle" size={24} color="#d32f2f" />
@@ -258,12 +258,12 @@ export default function EditHotelScreen() {
 
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Accommodation Type *</Text>
-              <TouchableOpacity 
-                style={styles.pickerButton} 
+              <TouchableOpacity
+                style={styles.pickerButton}
                 onPress={() => setShowTypePicker(true)}
               >
                 <Text style={[
-                  styles.pickerValue, 
+                  styles.pickerValue,
                   !formData.accommodationType && styles.placeholderText
                 ]}>
                   {formData.accommodationType || 'Select Type'}
@@ -349,8 +349,8 @@ export default function EditHotelScreen() {
               />
             </View>
 
-            <TouchableOpacity 
-              style={[styles.submitButton, loading && { opacity: 0.7 }]} 
+            <TouchableOpacity
+              style={[styles.submitButton, loading && { opacity: 0.7 }]}
               onPress={handleUpdate}
               disabled={loading}
             >
@@ -372,9 +372,9 @@ export default function EditHotelScreen() {
         animationType="slide"
         onRequestClose={() => setShowTypePicker(false)}
       >
-        <TouchableOpacity 
-          style={styles.modalOverlay} 
-          activeOpacity={1} 
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
           onPress={() => setShowTypePicker(false)}
         >
           <View style={styles.modalContent}>
@@ -388,7 +388,7 @@ export default function EditHotelScreen() {
               data={ACCOMMODATION_TYPES}
               keyExtractor={(item) => item}
               renderItem={({ item }) => (
-                <TouchableOpacity 
+                <TouchableOpacity
                   style={styles.typeOption}
                   onPress={() => {
                     updateField('accommodationType', item);
