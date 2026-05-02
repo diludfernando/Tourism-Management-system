@@ -79,10 +79,16 @@ export default function AdminTourPackDetailScreen() {
   }, [currentTourPackId]);
 
   const confirmDelete = () => {
-    Alert.alert('Delete Package', 'Are you sure you want to delete this tour package?', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Delete', style: 'destructive', onPress: handleDelete },
-    ]);
+    if (Platform.OS === 'web') {
+      if (window.confirm('Are you sure you want to delete this tour package?')) {
+        handleDelete();
+      }
+    } else {
+      Alert.alert('Delete Package', 'Are you sure you want to delete this tour package?', [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Delete', style: 'destructive', onPress: handleDelete },
+      ]);
+    }
   };
 
   const handleDelete = async () => {

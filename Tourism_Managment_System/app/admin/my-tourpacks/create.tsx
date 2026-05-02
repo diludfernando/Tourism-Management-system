@@ -63,6 +63,10 @@ export default function AdminCreateTourPackScreen() {
   };
 
   const showImageOptions = () => {
+    if (Platform.OS === 'web') {
+      pickImage();
+      return;
+    }
     Alert.alert('Add Image', 'Choose an option', [
       { text: 'Camera', onPress: takePhoto },
       { text: 'Gallery', onPress: pickImage },
@@ -163,16 +167,29 @@ export default function AdminCreateTourPackScreen() {
       form.availabilityDates.forEach(date => formData.append('availabilityDates[]', date));
 
       if (image) {
-        const filename = image.uri.split('/').pop();
-        const match = /\.(\w+)$/.exec(filename ?? '');
-        const type = match ? `image/${match[1]}` : 'image/jpeg';
-        formData.append('image', { uri: image.uri, name: filename, type } as any);
+        if (Platform.OS === 'web') {
+          const res = await fetch(image.uri);
+          const blob = await res.blob();
+          formData.append('image', blob, 'cover.jpg');
+        } else {
+          const filename = image.uri.split('/').pop();
+          const match = /\.(\w+)$/.exec(filename ?? '');
+          const type = match ? `image/${match[1]}` : 'image/jpeg';
+          formData.append('image', { uri: image.uri, name: filename, type } as any);
+        }
       }
 
-      gallery.forEach((img, i) => {
-        const filename = img.uri?.split('/').pop() || `img-${i}.jpg`;
-        formData.append('gallery', { uri: img.uri, name: filename, type: 'image/jpeg' } as any);
-      });
+      for (let i = 0; i < gallery.length; i++) {
+        const img = gallery[i];
+        if (Platform.OS === 'web') {
+          const res = await fetch(img.uri);
+          const blob = await res.blob();
+          formData.append('gallery', blob, `gallery-${i}.jpg`);
+        } else {
+          const filename = img.uri?.split('/').pop() || `img-${i}.jpg`;
+          formData.append('gallery', { uri: img.uri, name: filename, type: 'image/jpeg' } as any);
+        }
+      }
 
       const response = await fetch(`${API_BASE}/api/tourpacks`, {
         method: 'POST',

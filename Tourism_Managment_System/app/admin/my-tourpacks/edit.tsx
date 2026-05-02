@@ -129,6 +129,10 @@ export default function AdminEditTourPackScreen() {
   };
 
   const showImageOptions = () => {
+    if (Platform.OS === 'web') {
+      pickImage();
+      return;
+    }
     Alert.alert('Update Image', 'Choose an option', [
       { text: 'Camera', onPress: takePhoto },
       { text: 'Gallery', onPress: pickImage },
@@ -239,16 +243,30 @@ export default function AdminEditTourPackScreen() {
       formData.append('retainedGalleryJson', JSON.stringify(retainedExistingGallery));
 
       if (selectedImage) {
-        const filename = selectedImage.uri.split('/').pop();
-        const match = /\.(\w+)$/.exec(filename ?? '');
-        const type = match ? `image/${match[1]}` : 'image/jpeg';
-        formData.append('image', { uri: selectedImage.uri, name: filename, type } as any);
+        if (Platform.OS === 'web') {
+          const res = await fetch(selectedImage.uri);
+          const blob = await res.blob();
+          formData.append('image', blob, 'cover.jpg');
+        } else {
+          const filename = selectedImage.uri.split('/').pop();
+          const match = /\.(\w+)$/.exec(filename ?? '');
+          const type = match ? `image/${match[1]}` : 'image/jpeg';
+          formData.append('image', { uri: selectedImage.uri, name: filename, type } as any);
+        }
       }
 
-      gallery.filter(img => !img.existing).forEach((img, i) => {
-        const filename = img.uri?.split('/').pop() || `img-${i}.jpg`;
-        formData.append('gallery', { uri: img.uri, name: filename, type: 'image/jpeg' } as any);
-      });
+      const newGallery = gallery.filter(img => !img.existing);
+      for (let i = 0; i < newGallery.length; i++) {
+        const img = newGallery[i];
+        if (Platform.OS === 'web') {
+          const res = await fetch(img.uri);
+          const blob = await res.blob();
+          formData.append('gallery', blob, `gallery-${i}.jpg`);
+        } else {
+          const filename = img.uri?.split('/').pop() || `img-${i}.jpg`;
+          formData.append('gallery', { uri: img.uri, name: filename, type: 'image/jpeg' } as any);
+        }
+      }
 
       const authHeaders = await getAuthHeaders();
       const response = await fetch(`${API_BASE}/api/tourpacks/${tourPackId}`, {
