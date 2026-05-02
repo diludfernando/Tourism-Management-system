@@ -9,8 +9,10 @@ import {
   TouchableOpacity,
   SafeAreaView,
   TextInput,
+  Image,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import * as ImagePicker from 'expo-image-picker';
 import { API_BASE } from '@/src/config';
 import { getAuthToken, getAuthRole, clearAuthSession } from '@/src/auth';
 
@@ -20,6 +22,7 @@ interface UserProfile {
   email: string;
   phoneNumber: string;
   role: string;
+  profilePhoto?: string;
   createdAt: string;
 }
 
@@ -32,6 +35,7 @@ export default function UserProfileScreen() {
   const [isSaving, setIsSaving] = useState(false);
   const [editedName, setEditedName] = useState('');
   const [editedPhone, setEditedPhone] = useState('');
+  const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null);
 
   useEffect(() => {
     const checkRoleAndFetch = async () => {
@@ -88,6 +92,24 @@ export default function UserProfileScreen() {
     }
   };
 
+  const handlePickImage = async () => {
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        setSelectedPhoto(result.assets[0].uri);
+      }
+    } catch (err) {
+      Alert.alert('Error', 'Failed to pick image');
+      console.error('Image picker error:', err);
+    }
+  };
+
   const handleSaveProfile = async () => {
     if (!editedName.trim()) {
       Alert.alert('Error', 'Name cannot be empty');
@@ -108,16 +130,28 @@ export default function UserProfileScreen() {
         return;
       }
 
+      const formData = new FormData();
+      formData.append('name', editedName.trim());
+      formData.append('phoneNumber', editedPhone.trim());
+
+      if (selectedPhoto) {
+        const uri = selectedPhoto;
+        const filename = uri.split('/').pop() || 'photo.jpg';
+        const match = /\.(\w+)$/.exec(filename);
+        const type = match ? `image/${match[1].toLowerCase()}` : 'image/jpeg';
+
+        // Convert URI to blob for proper file upload in React Native
+        const response_blob = await fetch(uri);
+        const blob = await response_blob.blob();
+        formData.append('profilePhoto', blob, filename);
+      }
+
       const response = await fetch(`${API_BASE}/api/users/me`, {
         method: 'PUT',
         headers: {
-          'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({
-          name: editedName.trim(),
-          phoneNumber: editedPhone.trim(),
-        }),
+        body: formData,
       });
 
       if (!response.ok) {
@@ -127,6 +161,7 @@ export default function UserProfileScreen() {
 
       const updatedUser = await response.json();
       setUser(updatedUser);
+      setSelectedPhoto(null);
       setIsEditing(false);
       Alert.alert('Success', 'Profile updated successfully');
     } catch (err) {
@@ -141,6 +176,7 @@ export default function UserProfileScreen() {
   const handleCancel = () => {
     setEditedName(user?.name || '');
     setEditedPhone(user?.phoneNumber || '');
+    setSelectedPhoto(null);
     setIsEditing(false);
   };
 
@@ -212,9 +248,15 @@ export default function UserProfileScreen() {
             {/* Profile Card */}
             <View style={styles.profileCard}>
               <View style={styles.avatarContainer}>
-                <View style={styles.avatar}>
-                  <Text style={styles.avatarText}>{editedName.charAt(0).toUpperCase()}</Text>
-                </View>
+                {selectedPhoto ? (
+                  <Image source={{ uri: selectedPhoto }} style={styles.profileImage} />
+                ) : user.profilePhoto ? (
+                  <Image source={{ uri: `${API_BASE}${user.profilePhoto}` }} style={styles.profileImage} />
+                ) : (
+                  <View style={styles.avatar}>
+                    <Text style={styles.avatarText}>{editedName.charAt(0).toUpperCase()}</Text>
+                  </View>
+                )}
               </View>
               <Text style={styles.userName}>{editedName}</Text>
               <Text style={styles.userRole}>Regular User</Text>
@@ -224,6 +266,19 @@ export default function UserProfileScreen() {
             {isEditing ? (
               <View style={styles.section}>
                 <Text style={styles.sectionTitle}>Edit Profile</Text>
+
+                {/* Change Photo Button */}
+                <View style={styles.formGroup}>
+                  <TouchableOpacity 
+                    style={styles.changePhotoButton} 
+                    onPress={handlePickImage}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={styles.changePhotoButtonText}>
+                      {selectedPhoto || user.profilePhoto ? 'Change Photo' : 'Add Photo'}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
 
                 <View style={styles.formGroup}>
                   <Text style={styles.label}>Full Name</Text>
@@ -400,6 +455,11 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#fff',
   },
+  profileImage: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+  },
   userName: {
     fontSize: 22,
     fontWeight: '700',
@@ -459,6 +519,19 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#000',
     backgroundColor: '#fafafa',
+  },
+  changePhotoButton: {
+    backgroundColor: '#e3f2fd',
+    borderWidth: 1.5,
+    borderColor: '#007AFF',
+    borderRadius: 8,
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  changePhotoButtonText: {
+    color: '#007AFF',
+    fontSize: 16,
+    fontWeight: '600',
   },
   saveButton: {
     backgroundColor: '#007AFF',

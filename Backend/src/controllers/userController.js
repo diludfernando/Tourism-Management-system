@@ -177,6 +177,7 @@ const updateProfile = async (req, res) => {
     console.log('=== UPDATE PROFILE REQUEST ===');
     console.log('User ID:', req.user._id);
     console.log('Request body:', { name, phoneNumber });
+    console.log('File received:', req.file ? `${req.file.filename}` : 'No file');
 
     const user = await User.findById(req.user._id);
 
@@ -244,6 +245,13 @@ const updateProfile = async (req, res) => {
       }
     }
 
+    // Handle profile photo upload
+    if (req.file) {
+      const photoPath = `/uploads/${req.file.filename}`;
+      updateData.profilePhoto = photoPath;
+      console.log('Profile photo will be updated to:', photoPath);
+    }
+
     // If no changes, return current data
     if (Object.keys(updateData).length === 0) {
       console.log('No changes detected, returning current user data');
@@ -253,6 +261,7 @@ const updateProfile = async (req, res) => {
         email: user.email,
         phoneNumber: user.phoneNumber,
         role: user.role,
+        profilePhoto: user.profilePhoto,
         createdAt: user.createdAt,
         updatedAt: user.updatedAt,
       });
@@ -270,7 +279,7 @@ const updateProfile = async (req, res) => {
     ).select('-password');
 
     console.log('User updated successfully');
-    console.log('Updated user:', { name: updatedUser.name, phoneNumber: updatedUser.phoneNumber, updatedAt: updatedUser.updatedAt });
+    console.log('Updated user:', { name: updatedUser.name, phoneNumber: updatedUser.phoneNumber, profilePhoto: updatedUser.profilePhoto, updatedAt: updatedUser.updatedAt });
 
     res.json(updatedUser);
   } catch (error) {
