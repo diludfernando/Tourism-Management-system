@@ -9,7 +9,9 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  Image as RNImage,
 } from 'react-native';
+import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { API_BASE } from '../../../src/config';
@@ -21,6 +23,7 @@ type UserItem = {
   email: string;
   phoneNumber?: string;
   role: 'user' | 'admin';
+  profilePhoto?: string;
   createdAt?: string;
   updatedAt?: string;
 };
@@ -226,7 +229,16 @@ export default function AdminUsersScreen() {
             <View key={user._id} style={styles.card}>
               <View style={styles.cardTopRow}>
                 <View style={styles.avatar}>
-                  <Ionicons name="person" size={22} color="#FFF" />
+                  {user.profilePhoto ? (
+                    <Image 
+                      source={{ uri: `${API_BASE}${user.profilePhoto}` }} 
+                      style={styles.avatarImage}
+                      contentFit="cover"
+                      transition={300}
+                    />
+                  ) : (
+                    <Ionicons name="person" size={22} color="#FFF" />
+                  )}
                 </View>
                 <View style={styles.userMeta}>
                   <Text style={styles.userName}>{user.name}</Text>
@@ -462,6 +474,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
+    overflow: 'hidden',
+  },
+  avatarImage: {
+    width: '100%',
+    height: '100%',
   },
   userMeta: {
     flex: 1,
