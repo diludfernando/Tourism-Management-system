@@ -1,15 +1,15 @@
 import React, { useState } from 'react';
-import {
-  StyleSheet,
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  SafeAreaView,
-  KeyboardAvoidingView,
-  Platform,
+import { 
+  StyleSheet, 
+  View, 
+  Text, 
+  TextInput, 
+  TouchableOpacity, 
+  SafeAreaView, 
+  KeyboardAvoidingView, 
+  Platform, 
   ActivityIndicator,
-  Alert
+  Alert 
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -22,7 +22,7 @@ const API_URL = `${API_BASE}/api/users`;
 
 export default function LoginScreen() {
   const router = useRouter();
-
+  
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -33,10 +33,8 @@ export default function LoginScreen() {
       setErrorMsg('Please enter both email and password.');
       return;
     }
-
     setErrorMsg('');
     setLoading(true);
-
     try {
       const response = await fetch(`${API_URL}/login`, {
         method: 'POST',
@@ -52,7 +50,6 @@ export default function LoginScreen() {
         // Save the token and role
         await saveAuthSession(data.token, data.role);
         console.log('✅ Login successful:', data.email, 'Role:', data.role);
-
         if (data.role === 'admin') {
           router.replace({ pathname: '/admin', params: { admin: 'true' } });
         } else {
@@ -83,7 +80,6 @@ export default function LoginScreen() {
         />
         <View style={styles.overlay} />
       </View>
-
       <SafeAreaView style={{ flex: 1 }}>
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}

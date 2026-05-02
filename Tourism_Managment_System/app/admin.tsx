@@ -162,6 +162,13 @@ export default function AdminScreen() {
             <Ionicons name="calendar-outline" size={20} color="#FFF" />
             <Text style={styles.actionButtonText}>Booking Management</Text>
           </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={() => router.push('/admin/feedback')}
+          >
+            <Ionicons name="chatbubbles-outline" size={20} color="#FFF" />
+            <Text style={styles.actionButtonText}>Feedback Moderation</Text>
+          </TouchableOpacity>
         
           <TouchableOpacity 
             style={[styles.actionButton, { backgroundColor: '#d32f2f' }]}

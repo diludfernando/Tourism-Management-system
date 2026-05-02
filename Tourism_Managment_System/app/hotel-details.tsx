@@ -35,6 +35,13 @@ type Hotel = {
   isAvailable?: boolean;
 };
 
+type Review = {
+  _id: string;
+  user: { name: string; profilePhoto?: string };
+  rating: number;
+  comment: string;
+  createdAt: string;
+};
 const formatPrice = (value: number) =>
   `LKR ${Number(value || 0).toLocaleString(undefined, {
     minimumFractionDigits: 2,
@@ -46,12 +53,14 @@ export default function HotelDetailsScreen() {
   const { id, transportId, tourPackId, admin, persons } = useLocalSearchParams<{ 
     id?: string; 
     transportId?: string; 
-    tourPackId?: string; 
+    tourPackId?: string;
     admin?: string;
     persons?: string;
   }>();
   const [hotel, setHotel] = useState<Hotel | null>(null);
+  const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingReviews, setLoadingReviews] = useState(false);
   const isAdminMode = admin === 'true';
   const isSelectionMode = Boolean(transportId) || Boolean(tourPackId);
 
@@ -89,6 +98,7 @@ export default function HotelDetailsScreen() {
       }
 
       setHotel(data);
+      fetchHotelReviews();
     } catch (error) {
       console.error('Fetch Error:', error);
       Alert.alert('Connection Error', 'Could not connect to the server.');
@@ -98,6 +108,21 @@ export default function HotelDetailsScreen() {
     }
   }, [handleBack, id]);
 
+  const fetchHotelReviews = async () => {
+    if (!id) return;
+    try {
+      setLoadingReviews(true);
+      const response = await fetch(`${API_BASE}/api/feedback/target/${id}`);
+      if (response.ok) {
+        const data = await response.json();
+        setReviews(data);
+      }
+    } catch (err) {
+      console.error('Failed to fetch reviews', err);
+    } finally {
+      setLoadingReviews(false);
+    }
+  };
   useEffect(() => {
     fetchHotelDetails();
   }, [fetchHotelDetails]);
@@ -244,6 +269,46 @@ export default function HotelDetailsScreen() {
               </View>
             </View>
           ) : null}
+          <View style={styles.section}>
+            <Text style={styles.sectionEyebrow}>Experiences</Text>
+            <Text style={styles.sectionTitle}>Guest Reviews</Text>
+
+            {loadingReviews ? (
+              <ActivityIndicator size="small" color="#0F4C81" />
+            ) : reviews.length === 0 ? (
+              <View style={styles.noReviews}>
+                <Ionicons name="chatbubble-outline" size={32} color="#CBD5E1" />
+                <Text style={styles.noReviewsText}>No reviews yet. Be the first to review after your stay!</Text>
+              </View>
+            ) : (
+              <View style={styles.reviewsList}>
+                {reviews.map((review) => (
+                  <View key={review._id} style={styles.reviewItem}>
+                    <View style={styles.reviewHeader}>
+                      <View style={styles.reviewerInfo}>
+                        {review.user?.profilePhoto ? (
+                          <Image source={{ uri: `${API_BASE}${review.user.profilePhoto}` }} style={styles.reviewerAvatar} />
+                        ) : (
+                          <View style={styles.reviewerAvatarFallback}>
+                            <Text style={styles.reviewerInitial}>{review.user?.name?.charAt(0) || 'U'}</Text>
+                          </View>
+                        )}
+                        <View>
+                          <Text style={styles.reviewerName}>{review.user?.name || 'Guest'}</Text>
+                          <Text style={styles.reviewDate}>{new Date(review.createdAt).toLocaleDateString()}</Text>
+                        </View>
+                      </View>
+                      <View style={styles.reviewRating}>
+                        <Ionicons name="star" size={14} color="#FFD700" />
+                        <Text style={styles.reviewRatingText}>{review.rating}</Text>
+                      </View>
+                    </View>
+                    <Text style={styles.reviewCommentText}>{review.comment}</Text>
+                  </View>
+                ))}
+              </View>
+            )}
+          </View>
         </View>
       </ScrollView>
 
@@ -563,5 +628,86 @@ const styles = StyleSheet.create({
     color: '#0F172A',
     fontSize: 15,
     fontWeight: '700',
+  },
+  noReviews: {
+    alignItems: 'center',
+    padding: 24,
+    backgroundColor: '#FFF',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  noReviewsText: {
+    color: '#64748B',
+    marginTop: 8,
+    textAlign: 'center',
+  },
+  reviewsList: {
+    gap: 16,
+  },
+  reviewItem: {
+    backgroundColor: '#FFF',
+    padding: 16,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  reviewHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 12,
+  },
+  reviewerInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  reviewerAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+  },
+  reviewerAvatarFallback: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#E2E8F0',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  reviewerInitial: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#64748B',
+  },
+  reviewerName: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#0F172A',
+  },
+  reviewDate: {
+    fontSize: 12,
+    color: '#64748B',
+    marginTop: 2,
+  },
+  reviewRating: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFBEB',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    gap: 4,
+  },
+  reviewRatingText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#B45309',
+  },
+  reviewCommentText: {
+    fontSize: 14,
+    lineHeight: 22,
+    color: '#475569',
   },
 });

@@ -11,7 +11,9 @@ import {
   TextInput,
   Image,
   Platform,
+  Modal,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import { API_BASE } from '../src/config';
@@ -27,6 +29,24 @@ interface UserProfile {
   createdAt: string;
 }
 
+interface Review {
+  _id: string;
+  feedbackType: string;
+  targetId: any;
+  rating: number;
+  title: string;
+  comment: string;
+  status: string;
+  createdAt: string;
+}
+
+interface AvailableBooking {
+  _id: string;
+  bookingReference: string;
+  hotel?: any;
+  tourPack?: any;
+  transportation?: any;
+}
 export default function UserProfileScreen() {
   const router = useRouter();
   const [user, setUser] = useState<UserProfile | null>(null);
@@ -47,6 +67,20 @@ export default function UserProfileScreen() {
   const [isChangingPassword, setIsChangingPassword] = useState(false);
   const [passwordError, setPasswordError] = useState('');
 
+  // Tabs and Reviews state
+  const [activeTab, setActiveTab] = useState<'profile' | 'reviews'>('profile');
+  const [myReviews, setMyReviews] = useState<Review[]>([]);
+  const [loadingReviews, setLoadingReviews] = useState(false);
+  
+  // Review Modal state
+  const [showReviewModal, setShowReviewModal] = useState(false);
+  const [reviewType, setReviewType] = useState<'hotel' | 'tourpack' | 'transportation' | 'general'>('hotel');
+  const [availableBookings, setAvailableBookings] = useState<AvailableBooking[]>([]);
+  const [selectedBooking, setSelectedBooking] = useState<string>('');
+  const [rating, setRating] = useState(5);
+  const [comment, setComment] = useState('');
+  const [loadingBookings, setLoadingBookings] = useState(false);
+  const [submittingReview, setSubmittingReview] = useState(false);
   useEffect(() => {
     const checkRoleAndFetch = async () => {
       const role = await getAuthRole();
@@ -102,6 +136,142 @@ export default function UserProfileScreen() {
     }
   };
 
+  const fetchMyReviews = async () => {
+    try {
+      setLoadingReviews(true);
+      const token = await getAuthToken();
+      const response = await fetch(`${API_BASE}/api/feedback/my`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setMyReviews(data);
+      }
+    } catch (err) {
+      console.error('Failed to fetch reviews:', err);
+    } finally {
+      setLoadingReviews(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'reviews') {
+      fetchMyReviews();
+    }
+  }, [activeTab]);
+
+  const fetchAvailableBookings = async (type: string) => {
+    if (type === 'general') {
+      setAvailableBookings([]);
+      setSelectedBooking('');
+      return;
+    }
+    try {
+      setLoadingBookings(true);
+      const token = await getAuthToken();
+      const response = await fetch(`${API_BASE}/api/feedback/available-bookings/${type}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setAvailableBookings(data);
+        if (data.length > 0) {
+          setSelectedBooking(data[0]._id);
+        } else {
+          setSelectedBooking('');
+        }
+      }
+    } catch (err) {
+      console.error('Failed to fetch bookings:', err);
+    } finally {
+      setLoadingBookings(false);
+    }
+  };
+
+  useEffect(() => {
+    if (showReviewModal) {
+      fetchAvailableBookings(reviewType);
+    }
+  }, [reviewType, showReviewModal]);
+
+  const handleSubmitReview = async () => {
+    if (!comment.trim()) {
+      Alert.alert('Error', 'Please enter a comment');
+      return;
+    }
+    if (reviewType !== 'general' && !selectedBooking) {
+      Alert.alert('Error', 'Please select a booking to review');
+      return;
+    }
+
+    try {
+      setSubmittingReview(true);
+      const token = await getAuthToken();
+      
+      const booking = availableBookings.find(b => b._id === selectedBooking);
+      let targetId = null;
+      if (booking) {
+        if (reviewType === 'hotel') targetId = booking.hotel?._id;
+        else if (reviewType === 'tourpack') targetId = booking.tourPack?._id;
+        else if (reviewType === 'transportation') targetId = booking.transportation?._id;
+      }
+
+      const payload = {
+        feedbackType: reviewType,
+        rating,
+        comment,
+        targetId: reviewType !== 'general' ? targetId : undefined,
+      };
+
+      const response = await fetch(`${API_BASE}/api/feedback`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (response.ok) {
+        setShowReviewModal(false);
+        setComment('');
+        setRating(5);
+        fetchMyReviews();
+        Alert.alert('Success', 'Your review has been submitted successfully.');
+      } else {
+        const errorData = await response.json();
+        Alert.alert('Error', errorData.message || 'Failed to submit review');
+      }
+    } catch (err) {
+      Alert.alert('Error', 'Failed to submit review');
+    } finally {
+      setSubmittingReview(false);
+    }
+  };
+
+  const handleDeleteReview = async (id: string) => {
+    Alert.alert('Delete Review', 'Are you sure you want to delete this review?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            const token = await getAuthToken();
+            const response = await fetch(`${API_BASE}/api/feedback/${id}`, {
+              method: 'DELETE',
+              headers: { Authorization: `Bearer ${token}` },
+            });
+            if (response.ok) {
+              fetchMyReviews();
+            }
+          } catch (err) {
+            console.error('Delete error', err);
+          }
+        }
+      }
+    ]);
+  };
   const handlePickImage = async () => {
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
@@ -340,7 +510,23 @@ export default function UserProfileScreen() {
           </View>
         )}
 
-        {user && (
+        {/* Custom Tab Bar */}
+        <View style={styles.tabContainer}>
+          <TouchableOpacity 
+            style={[styles.tab, activeTab === 'profile' && styles.activeTab]}
+            onPress={() => setActiveTab('profile')}
+          >
+            <Text style={[styles.tabText, activeTab === 'profile' && styles.activeTabText]}>Profile</Text>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={[styles.tab, activeTab === 'reviews' && styles.activeTab]}
+            onPress={() => setActiveTab('reviews')}
+          >
+            <Text style={[styles.tabText, activeTab === 'reviews' && styles.activeTabText]}>My Reviews</Text>
+          </TouchableOpacity>
+        </View>
+
+        {user && activeTab === 'profile' && (
           <View>
             {/* Profile Card */}
             <View style={styles.profileCard}>
@@ -535,8 +721,169 @@ export default function UserProfileScreen() {
             )}
 
             <View style={{ height: 30 }} />
+        )}
+
+        {user && activeTab === 'reviews' && (
+          <View style={styles.reviewsContainer}>
+            <TouchableOpacity 
+              style={styles.writeReviewButton}
+              onPress={() => setShowReviewModal(true)}
+            >
+              <Ionicons name="pencil" size={20} color="#fff" />
+              <Text style={styles.writeReviewText}>Write a Review</Text>
+            </TouchableOpacity>
+
+            {loadingReviews ? (
+              <ActivityIndicator size="large" color="#007AFF" style={{ marginTop: 20 }} />
+            ) : myReviews.length === 0 ? (
+              <View style={styles.emptyReviews}>
+                <Ionicons name="chatbubble-ellipses-outline" size={50} color="#ccc" />
+                <Text style={styles.emptyReviewsText}>You haven't written any reviews yet.</Text>
+              </View>
+            ) : (
+              myReviews.map((review) => (
+                <View key={review._id} style={styles.reviewCard}>
+                  <View style={styles.reviewHeader}>
+                    <View>
+                      <Text style={styles.reviewType}>
+                        {review.feedbackType === 'hotel' ? '🏨 Hotel' :
+                         review.feedbackType === 'tourpack' ? '🧳 Tour Package' :
+                         review.feedbackType === 'transportation' ? '🚗 Transportation' : '⭐ General App'}
+                      </Text>
+                      {review.targetId?.name && <Text style={styles.reviewTarget}>{review.targetId.name}</Text>}
+                      {review.targetId?.title && <Text style={styles.reviewTarget}>{review.targetId.title}</Text>}
+                    </View>
+                    <View style={styles.reviewStatusContainer}>
+                      <Text style={[styles.reviewStatus, review.status === 'hidden' && styles.reviewStatusHidden]}>
+                        {review.status === 'published' ? 'Published' : 'Hidden by Admin'}
+                      </Text>
+                    </View>
+                  </View>
+                  
+                  <View style={styles.starsRow}>
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <Ionicons 
+                        key={star} 
+                        name={star <= review.rating ? "star" : "star-outline"} 
+                        size={16} 
+                        color="#FFD700" 
+                      />
+                    ))}
+                  </View>
+
+                  <Text style={styles.reviewComment}>{review.comment}</Text>
+                  
+                  <View style={styles.reviewFooter}>
+                    <Text style={styles.reviewDate}>{new Date(review.createdAt).toLocaleDateString()}</Text>
+                    <TouchableOpacity onPress={() => handleDeleteReview(review._id)}>
+                      <Ionicons name="trash-outline" size={20} color="#ff4444" />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              ))
+            )}
+            <View style={{ height: 30 }} />
           </View>
         )}
+
+        {/* Write Review Modal */}
+        <Modal visible={showReviewModal} animationType="slide" transparent={true}>
+          <SafeAreaView style={styles.modalSafeArea}>
+            <View style={styles.modalContent}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Write a Review</Text>
+                <TouchableOpacity onPress={() => setShowReviewModal(false)}>
+                  <Ionicons name="close" size={28} color="#333" />
+                </TouchableOpacity>
+              </View>
+
+              <ScrollView style={styles.modalBody}>
+                <Text style={styles.label}>What are you reviewing?</Text>
+                <View style={styles.typeSelector}>
+                  {(['hotel', 'tourpack', 'transportation', 'general'] as const).map(type => (
+                    <TouchableOpacity 
+                      key={type}
+                      style={[styles.typeButton, reviewType === type && styles.typeButtonActive]}
+                      onPress={() => setReviewType(type)}
+                    >
+                      <Text style={[styles.typeButtonText, reviewType === type && styles.typeButtonTextActive]}>
+                        {type.charAt(0).toUpperCase() + type.slice(1)}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+
+                {reviewType !== 'general' && (
+                  <View style={styles.formGroup}>
+                    <Text style={styles.label}>Select Booking</Text>
+                    {loadingBookings ? (
+                      <ActivityIndicator color="#007AFF" />
+                    ) : availableBookings.length === 0 ? (
+                      <Text style={styles.noBookingsText}>No available completed/confirmed bookings to review.</Text>
+                    ) : (
+                      <View style={styles.pickerContainer}>
+                        {availableBookings.map(b => (
+                          <TouchableOpacity 
+                            key={b._id}
+                            style={[styles.bookingOption, selectedBooking === b._id && styles.bookingOptionActive]}
+                            onPress={() => setSelectedBooking(b._id)}
+                          >
+                            <Text style={styles.bookingOptionText}>
+                              {b.hotel?.name || b.tourPack?.title || b.transportation?.companyName || b.bookingReference}
+                            </Text>
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+                    )}
+                  </View>
+                )}
+
+                {(reviewType === 'general' || availableBookings.length > 0) && (
+                  <>
+                    <View style={styles.formGroup}>
+                      <Text style={styles.label}>Rating</Text>
+                      <View style={styles.starsSelector}>
+                        {[1, 2, 3, 4, 5].map((star) => (
+                          <TouchableOpacity key={star} onPress={() => setRating(star)}>
+                            <Ionicons 
+                              name={star <= rating ? "star" : "star-outline"} 
+                              size={32} 
+                              color="#FFD700" 
+                            />
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+                    </View>
+
+                    <View style={styles.formGroup}>
+                      <Text style={styles.label}>Comment</Text>
+                      <TextInput
+                        style={[styles.input, styles.textArea]}
+                        placeholder="Share your experience..."
+                        value={comment}
+                        onChangeText={setComment}
+                        multiline
+                        numberOfLines={4}
+                        textAlignVertical="top"
+                      />
+                    </View>
+
+                    <TouchableOpacity 
+                      style={[styles.submitReviewButton, submittingReview && styles.buttonDisabled]}
+                      onPress={handleSubmitReview}
+                      disabled={submittingReview}
+                    >
+                      <Text style={styles.submitReviewButtonText}>
+                        {submittingReview ? 'Submitting...' : 'Submit Review'}
+                      </Text>
+                    </TouchableOpacity>
+                  </>
+                )}
+                <View style={{ height: 40 }} />
+              </ScrollView>
+            </View>
+          </SafeAreaView>
+        </Modal>
       </ScrollView>
     </SafeAreaView>
   );
@@ -805,5 +1152,229 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '600',
     textAlign: 'center',
+  },
+  // Tab Styles
+  tabContainer: {
+    flexDirection: 'row',
+    marginHorizontal: 16,
+    marginTop: 10,
+    backgroundColor: '#fff',
+    borderRadius: 8,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#eee',
+  },
+  tab: {
+    flex: 1,
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  activeTab: {
+    backgroundColor: '#007AFF',
+  },
+  tabText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#666',
+  },
+  activeTabText: {
+    color: '#fff',
+  },
+  
+  // Reviews Styles
+  reviewsContainer: {
+    padding: 16,
+  },
+  writeReviewButton: {
+    backgroundColor: '#007AFF',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 14,
+    borderRadius: 8,
+    marginBottom: 20,
+    gap: 8,
+  },
+  writeReviewText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  emptyReviews: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 40,
+    backgroundColor: '#fff',
+    borderRadius: 12,
+  },
+  emptyReviewsText: {
+    marginTop: 12,
+    fontSize: 16,
+    color: '#666',
+  },
+  reviewCard: {
+    backgroundColor: '#fff',
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  reviewHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 8,
+  },
+  reviewType: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#333',
+  },
+  reviewTarget: {
+    fontSize: 13,
+    color: '#666',
+    marginTop: 2,
+  },
+  reviewStatusContainer: {
+    alignItems: 'flex-end',
+  },
+  reviewStatus: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#4caf50',
+    backgroundColor: '#e8f5e9',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  reviewStatusHidden: {
+    color: '#ff9800',
+    backgroundColor: '#fff3e0',
+  },
+  starsRow: {
+    flexDirection: 'row',
+    marginBottom: 8,
+  },
+  reviewComment: {
+    fontSize: 15,
+    color: '#444',
+    lineHeight: 22,
+    marginBottom: 12,
+  },
+  reviewFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderTopWidth: 1,
+    borderTopColor: '#f0f0f0',
+    paddingTop: 12,
+  },
+  reviewDate: {
+    fontSize: 13,
+    color: '#999',
+  },
+  
+  // Modal Styles
+  modalSafeArea: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: '#f8f8f8',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    height: '80%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+  },
+  modalBody: {
+    padding: 16,
+  },
+  typeSelector: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 16,
+  },
+  typeButton: {
+    backgroundColor: '#fff',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#ddd',
+  },
+  typeButtonActive: {
+    backgroundColor: '#007AFF',
+    borderColor: '#007AFF',
+  },
+  typeButtonText: {
+    color: '#666',
+    fontWeight: '600',
+  },
+  typeButtonTextActive: {
+    color: '#fff',
+  },
+  noBookingsText: {
+    color: '#ff4444',
+    fontStyle: 'italic',
+    marginTop: 8,
+  },
+  pickerContainer: {
+    backgroundColor: '#fff',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    overflow: 'hidden',
+  },
+  bookingOption: {
+    padding: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  bookingOptionActive: {
+    backgroundColor: '#e3f2fd',
+  },
+  bookingOptionText: {
+    fontSize: 15,
+    color: '#333',
+  },
+  starsSelector: {
+    flexDirection: 'row',
+    gap: 8,
+    marginVertical: 8,
+  },
+  textArea: {
+    height: 100,
+  },
+  submitReviewButton: {
+    backgroundColor: '#007AFF',
+    padding: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginTop: 20,
+  },
+  submitReviewButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '700',
   },
 });

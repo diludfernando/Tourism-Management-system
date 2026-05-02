@@ -81,7 +81,6 @@ export default function UserDetailsScreen() {
         console.error('Failed to fetch current admin ID:', err);
       }
     };
-
     verifyAndLoad();
   }, [userId, router]);
 

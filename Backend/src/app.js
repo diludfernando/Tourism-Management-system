@@ -20,6 +20,7 @@ app.use('/api/users', require('./routes/userRoutes'));
 app.use('/api/hotels', require('./routes/hotelRoutes'));
 app.use('/api/bookings', require('./routes/bookingRoutes'));
 app.use('/api/tourpacks', require('./routes/tourPackRoutes'));
+app.use('/api/feedback', require('./routes/feedbackRoutes'));
 
 app.use((err, req, res, next) => {
 	console.error('Unhandled app error:', err && err.message ? err.message : err);
