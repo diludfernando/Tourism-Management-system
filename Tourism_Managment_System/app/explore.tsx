@@ -18,7 +18,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { API_BASE } from '../src/config';
-import { getAuthToken, getAuthRole } from '../src/auth';
+import { getAuthToken, getAuthRole, getAuthHeaders } from '../src/auth';
 
 const API_URL = `${API_BASE}/api/tourpacks`;
 const { width } = Dimensions.get('window');
@@ -52,6 +52,7 @@ export default function Explore() {
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
   const [packages, setPackages] = useState<TourPack[]>([]);
+  const [userProfile, setUserProfile] = useState<{ profilePhoto?: string } | null>(null);
 
   const fetchPackages = async () => {
     setLoading(true);
@@ -72,15 +73,28 @@ export default function Explore() {
 
   useFocusEffect(
     React.useCallback(() => {
-      const checkAdmin = async () => {
+      const checkAdminAndLoad = async () => {
         const role = await getAuthRole();
         if (role === 'admin') {
           router.replace({ pathname: '/admin', params: { admin: 'true' } });
           return;
         }
+        
         fetchPackages();
+
+        // Fetch user profile for the icon
+        try {
+          const headers = await getAuthHeaders();
+          const response = await fetch(`${API_BASE}/api/users/me`, { headers });
+          if (response.ok) {
+            const data = await response.json();
+            setUserProfile(data);
+          }
+        } catch (error) {
+          console.error('Error fetching profile in explore:', error);
+        }
       };
-      checkAdmin();
+      checkAdminAndLoad();
     }, [])
   );
 
@@ -162,7 +176,16 @@ export default function Explore() {
         <View style={{ width: 40 }} />
         <Text style={styles.headerTitle}>Explore Packages</Text>
         <TouchableOpacity onPress={() => router.push('/profile')} style={styles.profileButton}>
-          <Ionicons name="person-outline" size={22} color="#111827" />
+          {userProfile?.profilePhoto ? (
+            <Image 
+              source={{ uri: `${API_BASE}${userProfile.profilePhoto}` }} 
+              style={styles.profileButtonImage}
+              contentFit="cover"
+              transition={300}
+            />
+          ) : (
+            <Ionicons name="person-outline" size={22} color="#111827" />
+          )}
         </TouchableOpacity>
       </View>
 
@@ -274,6 +297,11 @@ const styles = StyleSheet.create({
     backgroundColor: '#F3F4F6',
     justifyContent: 'center',
     alignItems: 'center',
+    overflow: 'hidden',
+  },
+  profileButtonImage: {
+    width: '100%',
+    height: '100%',
   },
   listContent: {
     paddingBottom: 36,

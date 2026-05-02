@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { StyleSheet, View, Text, TouchableOpacity, ScrollView, SafeAreaView, Platform } from 'react-native';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
 import { API_BASE } from '../src/config';
 import { clearAuthSession, getAuthHeaders, getAuthRole } from '../src/auth';
 
@@ -18,6 +19,7 @@ export default function AdminScreen() {
   const [bookings, setBookings] = useState<any[]>([]);
   const [hasVerifiedRole, setHasVerifiedRole] = useState(false);
   const [isAdminMode, setIsAdminMode] = useState(false);
+  const [userProfile, setUserProfile] = useState<{ profilePhoto?: string } | null>(null);
 
   useEffect(() => {
     const verifyRole = async () => {
@@ -43,20 +45,30 @@ export default function AdminScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      const loadBookings = async () => {
+      const loadData = async () => {
         try {
           const headers = await getAuthHeaders();
-          const response = await fetch(API_URL, { headers });
-          const data = await response.json();
-          if (response.ok) {
-            setBookings(data);
+          
+          // Fetch bookings
+          const bookingsResponse = await fetch(API_URL, { headers });
+          const bookingsData = await bookingsResponse.json();
+          if (bookingsResponse.ok) {
+            setBookings(bookingsData);
           }
-        } catch {
+
+          // Fetch user profile for the icon
+          const profileResponse = await fetch(`${API_BASE}/api/users/me`, { headers });
+          if (profileResponse.ok) {
+            const profileData = await profileResponse.json();
+            setUserProfile(profileData);
+          }
+        } catch (error) {
+          console.error('Error loading admin dashboard data:', error);
           setBookings([]);
         }
       };
 
-      loadBookings();
+      loadData();
     }, [])
   );
 
@@ -87,7 +99,16 @@ export default function AdminScreen() {
           style={styles.profileIconButton}
           onPress={() => router.push('/admin/profile')}
         >
-          <Ionicons name="person-circle-outline" size={32} color="#FF6B35" />
+          {userProfile?.profilePhoto ? (
+            <Image 
+              source={{ uri: `${API_BASE}${userProfile.profilePhoto}` }} 
+              style={styles.profileImage}
+              contentFit="cover"
+              transition={300}
+            />
+          ) : (
+            <Ionicons name="person-circle-outline" size={32} color="#FF6B35" />
+          )}
         </TouchableOpacity>
       </View>
 
@@ -184,6 +205,12 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     justifyContent: 'center',
     alignItems: 'center',
+    overflow: 'hidden', // Ensure image stays within bounds
+  },
+  profileImage: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
   },
   backButton: {
     padding: 10,
