@@ -81,7 +81,14 @@ export default function AdminScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
+        <View style={{ width: 44 }} />
         <Text style={styles.headerTitle}>Admin Dashboard</Text>
+        <TouchableOpacity 
+          style={styles.profileIconButton}
+          onPress={() => router.push('/admin/profile')}
+        >
+          <Ionicons name="person-circle-outline" size={32} color="#FF6B35" />
+        </TouchableOpacity>
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
@@ -97,13 +104,7 @@ export default function AdminScreen() {
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Quick Actions</Text>
-          <TouchableOpacity
-            style={[styles.actionButton, { backgroundColor: '#FF6B35' }]}
-            onPress={() => router.push('/admin/profile')}
-          >
-            <Ionicons name="person-outline" size={20} color="#FFF" />
-            <Text style={styles.actionButtonText}>My Profile</Text>
-          </TouchableOpacity>
+
           <TouchableOpacity
             style={styles.actionButton}
             onPress={() => router.push({ pathname: '/admin/users', params: { admin: 'true' } } as any)}
@@ -170,12 +171,19 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 15,
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
     backgroundColor: '#FFF',
     borderBottomWidth: 1,
     borderBottomColor: '#EEE',
+  },
+  profileIconButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   backButton: {
     padding: 10,
