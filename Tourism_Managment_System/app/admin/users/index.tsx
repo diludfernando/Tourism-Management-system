@@ -39,6 +39,7 @@ export default function AdminUsersScreen() {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [hasVerifiedRole, setHasVerifiedRole] = useState(false);
   const [currentAdminId, setCurrentAdminId] = useState<string | null>(null);
+  const [activeFilter, setActiveFilter] = useState<'all' | 'admin' | 'user'>('all');
   const isAdminMode = admin === 'true';
 
   useEffect(() => {
@@ -95,10 +96,17 @@ export default function AdminUsersScreen() {
   );
 
   const filteredUsers = useMemo(() => {
-    const query = searchText.trim().toLowerCase();
-    if (!query) return users;
+    let result = users;
 
-    return users.filter((user) => {
+    // Filter by role if not 'all'
+    if (activeFilter !== 'all') {
+      result = result.filter((user) => user.role === activeFilter);
+    }
+
+    const query = searchText.trim().toLowerCase();
+    if (!query) return result;
+
+    return result.filter((user) => {
       return (
         user.name.toLowerCase().includes(query) ||
         user.email.toLowerCase().includes(query) ||
@@ -106,7 +114,7 @@ export default function AdminUsersScreen() {
         user.role.toLowerCase().includes(query)
       );
     });
-  }, [searchText, users]);
+  }, [searchText, users, activeFilter]);
 
   const adminCount = useMemo(() => users.filter((user) => user.role === 'admin').length, [users]);
   const userCount = useMemo(() => users.length - adminCount, [users.length, adminCount]);
@@ -191,18 +199,27 @@ export default function AdminUsersScreen() {
           </View>
 
           <View style={styles.metricsRow}>
-            <View style={styles.metricCard}>
+            <TouchableOpacity 
+              style={[styles.metricCard, activeFilter === 'all' && styles.metricCardActive]}
+              onPress={() => setActiveFilter('all')}
+            >
               <Text style={styles.metricValue}>{users.length}</Text>
               <Text style={styles.metricLabel}>Total Users</Text>
-            </View>
-            <View style={styles.metricCard}>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={[styles.metricCard, activeFilter === 'admin' && styles.metricCardActive]}
+              onPress={() => setActiveFilter('admin')}
+            >
               <Text style={styles.metricValue}>{adminCount}</Text>
               <Text style={styles.metricLabel}>Admins</Text>
-            </View>
-            <View style={styles.metricCard}>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={[styles.metricCard, activeFilter === 'user' && styles.metricCardActive]}
+              onPress={() => setActiveFilter('user')}
+            >
               <Text style={styles.metricValue}>{userCount}</Text>
               <Text style={styles.metricLabel}>Members</Text>
-            </View>
+            </TouchableOpacity>
           </View>
         </View>
 
@@ -417,6 +434,11 @@ const styles = StyleSheet.create({
   metricLabel: {
     color: 'rgba(255,255,255,0.82)',
     fontSize: 12,
+  },
+  metricCardActive: {
+    backgroundColor: 'rgba(255,255,255,0.25)',
+    borderColor: 'rgba(255,255,255,0.5)',
+    borderWidth: 1.5,
   },
   searchBox: {
     flexDirection: 'row',
