@@ -20,6 +20,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { Image } from 'expo-image';
 import { API_BASE } from '../src/config';
+import { getAuthHeaders, getAuthRole } from '../src/auth';
 
 const API_URL = `${API_BASE}/api/hotels`;
 
@@ -38,6 +39,7 @@ export default function EditHotelScreen() {
   const { id, admin } = useLocalSearchParams<{ id?: string; admin?: string }>();
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
+  const [hasVerifiedRole, setHasVerifiedRole] = useState(false);
   const [showTypePicker, setShowTypePicker] = useState(false);
   const [image, setImage] = useState<string | null>(null);
   
@@ -52,18 +54,27 @@ export default function EditHotelScreen() {
     contactNumber: '',
     amenities: '',
   });
-  const isAdminMode = admin === 'true';
+  const [isAdminMode, setIsAdminMode] = useState(false);
 
   useEffect(() => {
-    if (!isAdminMode) {
-      router.replace('/');
-      return;
-    }
+    const verifyRole = async () => {
+      const role = await getAuthRole();
+      const allowed = admin === 'true' && role === 'admin';
+      setIsAdminMode(allowed);
+      setHasVerifiedRole(true);
 
-    if (id) {
-      fetchHotelDetails();
-    }
-  }, [id, isAdminMode, router]);
+      if (!allowed) {
+        router.replace('/');
+        return;
+      }
+
+      if (id) {
+        fetchHotelDetails();
+      }
+    };
+
+    verifyRole();
+  }, [admin, id, router]);
 
   const fetchHotelDetails = async () => {
     try {
@@ -130,11 +141,10 @@ export default function EditHotelScreen() {
     try {
       const amenitiesArray = amenities ? amenities.split(',').map(item => item.trim()).filter(i => i) : [];
 
+      const headers = await getAuthHeaders({ 'Content-Type': 'application/json' });
       const response = await fetch(`${API_URL}/${id}`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers,
         body: JSON.stringify({
           name,
           location,
@@ -179,7 +189,7 @@ export default function EditHotelScreen() {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  if (!isAdminMode) {
+  if (!hasVerifiedRole || !isAdminMode) {
     return null;
   }
 

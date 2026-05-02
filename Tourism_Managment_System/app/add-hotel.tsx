@@ -20,6 +20,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { Image } from 'expo-image';
 import { API_BASE } from '../src/config';
+import { getAuthHeaders, getAuthRole } from '../src/auth';
 
 // Configuration for API URL
 const API_URL = `${API_BASE}/api/hotels`;
@@ -37,6 +38,7 @@ const ACCOMMODATION_TYPES = [
 export default function AddHotelScreen() {
   const router = useRouter();
   const { admin } = useLocalSearchParams<{ admin?: string }>();
+  const [hasVerifiedRole, setHasVerifiedRole] = useState(false);
   const [loading, setLoading] = useState(false);
   const [showTypePicker, setShowTypePicker] = useState(false);
   const [image, setImage] = useState<string | null>(null);
@@ -51,13 +53,22 @@ export default function AddHotelScreen() {
     contactNumber: '',
     amenities: '', // Will split by comma before sending
   });
-  const isAdminMode = admin === 'true';
+  const [isAdminMode, setIsAdminMode] = useState(false);
 
   useEffect(() => {
-    if (!isAdminMode) {
-      router.replace('/');
-    }
-  }, [isAdminMode, router]);
+    const verifyRole = async () => {
+      const role = await getAuthRole();
+      const allowed = admin === 'true' && role === 'admin';
+      setIsAdminMode(allowed);
+      setHasVerifiedRole(true);
+
+      if (!allowed) {
+        router.replace('/');
+      }
+    };
+
+    verifyRole();
+  }, [admin, router]);
 
   const pickImage = async () => {
     let result = await ImagePicker.launchImageLibraryAsync({
@@ -94,11 +105,10 @@ export default function AddHotelScreen() {
     try {
       const amenitiesArray = amenities ? amenities.split(',').map(item => item.trim()) : [];
 
+      const headers = await getAuthHeaders({ 'Content-Type': 'application/json' });
       const response = await fetch(API_URL, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers,
         body: JSON.stringify({
           name,
           location,
@@ -150,7 +160,7 @@ export default function AddHotelScreen() {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  if (!isAdminMode) {
+  if (!hasVerifiedRole || !isAdminMode) {
     return null;
   }
 

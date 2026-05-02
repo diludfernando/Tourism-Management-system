@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const { protect, admin } = require('../middleware/authMiddleware');
 const {
   addTransportation,
   getAllTransportation,
@@ -9,7 +10,7 @@ const {
 } = require('../controllers/transportationController');
 
 router.route('/')
-  .post(addTransportation)
+  .post(protect, admin, addTransportation)
   .get(getAllTransportation);
 
 router.route('/:id')

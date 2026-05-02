@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { 
   StyleSheet, 
   View, 
@@ -15,6 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import { Image } from 'expo-image';
 import { API_BASE } from '../src/config';
+import { getAuthHeaders, getAuthRole } from '../src/auth';
 
 const API_URL = `${API_BASE}/api/hotels`;
 const formatPrice = (value: number) =>
@@ -33,8 +34,26 @@ export default function HotelListScreen() {
   }>();
   const [hotels, setHotels] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const isAdminMode = admin === 'true';
+  const [hasVerifiedRole, setHasVerifiedRole] = useState(false);
+  const [isAdminMode, setIsAdminMode] = useState(false);
   const isSelectionMode = Boolean(transportId) || Boolean(tourPackId);
+
+  useEffect(() => {
+    const verifyRole = async () => {
+      if (admin !== 'true') {
+        setIsAdminMode(false);
+        setHasVerifiedRole(true);
+        return;
+      }
+
+      const role = await getAuthRole();
+      const allowed = role === 'admin';
+      setIsAdminMode(allowed);
+      setHasVerifiedRole(true);
+    };
+
+    verifyRole();
+  }, [admin]);
 
   const fetchHotels = async () => {
     setLoading(true);
@@ -64,6 +83,7 @@ export default function HotelListScreen() {
     try {
       const response = await fetch(`${API_URL}/${id}`, {
         method: 'DELETE',
+        headers: await getAuthHeaders(),
       });
       if (response.ok) {
         if (Platform.OS !== 'web') Alert.alert('Success', 'Hotel deleted successfully');

@@ -14,6 +14,7 @@ import {
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { API_BASE } from '../src/config';
+import { getAuthHeaders, getAuthRole } from '../src/auth';
 
 const API_URL = `${API_BASE}/api/bookings`;
 const STATUS_FILTERS = ['all', 'pending', 'confirmed', 'completed', 'cancelled'] as const;
@@ -89,17 +90,28 @@ export default function BookingManagementScreen() {
   const [activeFilter, setActiveFilter] = useState<(typeof STATUS_FILTERS)[number]>('all');
   const [feedback, setFeedback] = useState<FeedbackState>(null);
   const [pendingAction, setPendingAction] = useState<PendingAction>(null);
-  const isAdminMode = admin === 'true';
+  const [hasVerifiedRole, setHasVerifiedRole] = useState(false);
+  const [isAdminMode, setIsAdminMode] = useState(false);
 
   useEffect(() => {
-    if (!isAdminMode) {
-      router.replace('/');
-    }
-  }, [isAdminMode, router]);
+    const verifyRole = async () => {
+      const role = await getAuthRole();
+      const allowed = admin === 'true' && role === 'admin';
+      setIsAdminMode(allowed);
+      setHasVerifiedRole(true);
+
+      if (!allowed) {
+        router.replace('/');
+      }
+    };
+
+    verifyRole();
+  }, [admin, router]);
 
   const fetchBookings = async () => {
     try {
-      const response = await fetch(API_URL);
+      const headers = await getAuthHeaders();
+      const response = await fetch(API_URL, { headers });
       const data = await parseResponseBody(response);
       if (response.ok) {
         setBookings(Array.isArray(data) ? data : []);
@@ -153,7 +165,7 @@ export default function BookingManagementScreen() {
     try {
       const response = await fetch(`${API_URL}/${id}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: await getAuthHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify(payload),
       });
       const data = await parseResponseBody(response);
@@ -185,7 +197,10 @@ export default function BookingManagementScreen() {
   const deleteBooking = async (id: string) => {
     setProcessingId(id);
     try {
-      const response = await fetch(`${API_URL}/${id}`, { method: 'DELETE' });
+      const response = await fetch(`${API_URL}/${id}`, {
+        method: 'DELETE',
+        headers: await getAuthHeaders(),
+      });
       const data = await parseResponseBody(response);
       if (!response.ok) {
         setFeedback({
@@ -421,7 +436,7 @@ export default function BookingManagementScreen() {
     );
   };
 
-  if (!isAdminMode) {
+  if (!hasVerifiedRole || !isAdminMode) {
     return null;
   }
 

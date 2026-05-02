@@ -3,7 +3,7 @@ import { StyleSheet, View, Text, TouchableOpacity, ScrollView, SafeAreaView, Pla
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { API_BASE } from '../src/config';
-import { getAuthRole } from '../src/auth';
+import { clearAuthSession, getAuthHeaders, getAuthRole } from '../src/auth';
 
 const API_URL = `${API_BASE}/api/bookings`;
 const formatPrice = (value: number) =>
@@ -21,6 +21,13 @@ export default function AdminScreen() {
 
   useEffect(() => {
     const verifyRole = async () => {
+      if (admin !== 'true') {
+        setIsAdminMode(false);
+        setHasVerifiedRole(true);
+        router.replace('/explore');
+        return;
+      }
+
       const role = await getAuthRole();
       const allowed = role === 'admin';
       setIsAdminMode(allowed);
@@ -38,7 +45,8 @@ export default function AdminScreen() {
     useCallback(() => {
       const loadBookings = async () => {
         try {
-          const response = await fetch(API_URL);
+          const headers = await getAuthHeaders();
+          const response = await fetch(API_URL, { headers });
           const data = await response.json();
           if (response.ok) {
             setBookings(data);
@@ -135,7 +143,10 @@ export default function AdminScreen() {
         
           <TouchableOpacity 
             style={[styles.actionButton, { backgroundColor: '#d32f2f' }]}
-            onPress={() => router.push('/')}
+            onPress={async () => {
+              await clearAuthSession();
+              router.push('/');
+            }}
           >
             <Ionicons name="log-out-outline" size={20} color="#FFF" />
             <Text style={styles.actionButtonText}>Log Out</Text>
