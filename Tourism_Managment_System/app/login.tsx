@@ -1,15 +1,15 @@
 import React, { useState } from 'react';
-import { 
-  StyleSheet, 
-  View, 
-  Text, 
-  TextInput, 
-  TouchableOpacity, 
-  SafeAreaView, 
-  KeyboardAvoidingView, 
-  Platform, 
+import {
+  StyleSheet,
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  SafeAreaView,
+  KeyboardAvoidingView,
+  Platform,
   ActivityIndicator,
-  Alert 
+  Alert
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -22,7 +22,7 @@ const API_URL = `${API_BASE}/api/users`;
 
 export default function LoginScreen() {
   const router = useRouter();
-  
+
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -33,10 +33,10 @@ export default function LoginScreen() {
       setErrorMsg('Please enter both email and password.');
       return;
     }
-    
+
     setErrorMsg('');
     setLoading(true);
-    
+
     try {
       const response = await fetch(`${API_URL}/login`, {
         method: 'POST',
@@ -52,7 +52,7 @@ export default function LoginScreen() {
         // Save the token and role
         await saveAuthSession(data.token, data.role);
         console.log('✅ Login successful:', data.email, 'Role:', data.role);
-        
+
         if (data.role === 'admin') {
           router.replace({ pathname: '/admin', params: { admin: 'true' } });
         } else {
@@ -83,85 +83,85 @@ export default function LoginScreen() {
         />
         <View style={styles.overlay} />
       </View>
-      
+
       <SafeAreaView style={{ flex: 1 }}>
-        <KeyboardAvoidingView 
+        <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           style={{ flex: 1 }}
         >
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-            <Ionicons name="arrow-back" size={24} color="#FFF" />
-          </TouchableOpacity>
-        
-        </View>
+          <View style={styles.header}>
+            <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+              <Ionicons name="arrow-back" size={24} color="#FFF" />
+            </TouchableOpacity>
 
-        <View style={styles.content}>
-          <View style={styles.titleContainer}>
-            <Text style={styles.welcomeText}>Welcome back</Text>
-            <Text style={styles.subtitleText}>Sign in to access your administrative dashboard</Text>
           </View>
 
-          {errorMsg ? (
-            <View style={styles.errorContainer}>
-              <Ionicons name="alert-circle-outline" size={20} color="#E53E3E" />
-              <Text style={styles.errorText}>{errorMsg}</Text>
-            </View>
-          ) : null}
-
-          <View style={styles.formContainer}>
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Email Address</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="admin@example.com"
-                value={email}
-                onChangeText={(text) => { setEmail(text); setErrorMsg(''); }}
-                keyboardType="email-address"
-                autoCapitalize="none"
-              />
+          <View style={styles.content}>
+            <View style={styles.titleContainer}>
+              <Text style={styles.welcomeText}>Welcome back</Text>
+              <Text style={styles.subtitleText}>Sign in to manage your trips and bookings</Text>
             </View>
 
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Password</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Enter your password"
-                value={password}
-                onChangeText={(text) => { setPassword(text); setErrorMsg(''); }}
-                secureTextEntry
-              />
-            </View>
+            {errorMsg ? (
+              <View style={styles.errorContainer}>
+                <Ionicons name="alert-circle-outline" size={20} color="#E53E3E" />
+                <Text style={styles.errorText}>{errorMsg}</Text>
+              </View>
+            ) : null}
 
-            <TouchableOpacity 
-              style={styles.forgotPassword}
-              onPress={() => router.push('/forgot-password')}
-            >
-              <Text style={styles.forgotPasswordText}>Forgot password?</Text>
-            </TouchableOpacity>
+            <View style={styles.formContainer}>
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Email Address</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="admin@example.com"
+                  value={email}
+                  onChangeText={(text) => { setEmail(text); setErrorMsg(''); }}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                />
+              </View>
 
-            <TouchableOpacity 
-              style={[styles.loginButton, loading && { opacity: 0.8 }]} 
-              onPress={handleLogin}
-              disabled={loading}
-              activeOpacity={0.8}
-            >
-              {loading ? (
-                <ActivityIndicator color="#FFF" />
-              ) : (
-                <Text style={styles.loginButtonText}>Sign In</Text>
-              )}
-            </TouchableOpacity>
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Password</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Enter your password"
+                  value={password}
+                  onChangeText={(text) => { setPassword(text); setErrorMsg(''); }}
+                  secureTextEntry
+                />
+              </View>
 
-            <View style={styles.footerRow}>
-              <Text style={styles.footerText}>Don't have an account? </Text>
-              <TouchableOpacity onPress={() => router.replace('/signup')}>
-                <Text style={styles.footerLink}>Sign Up</Text>
+              <TouchableOpacity
+                style={styles.forgotPassword}
+                onPress={() => router.push('/forgot-password')}
+              >
+                <Text style={styles.forgotPasswordText}>Forgot password?</Text>
               </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.loginButton, loading && { opacity: 0.8 }]}
+                onPress={handleLogin}
+                disabled={loading}
+                activeOpacity={0.8}
+              >
+                {loading ? (
+                  <ActivityIndicator color="#FFF" />
+                ) : (
+                  <Text style={styles.loginButtonText}>Sign In</Text>
+                )}
+              </TouchableOpacity>
+
+              <View style={styles.footerRow}>
+                <Text style={styles.footerText}>Don't have an account? </Text>
+                <TouchableOpacity onPress={() => router.replace('/signup')}>
+                  <Text style={styles.footerLink}>Sign Up</Text>
+                </TouchableOpacity>
+              </View>
+
             </View>
-            
           </View>
-        </View>
         </KeyboardAvoidingView>
       </SafeAreaView>
     </View>
