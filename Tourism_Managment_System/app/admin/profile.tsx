@@ -45,6 +45,7 @@ export default function AdminProfileScreen() {
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [passwordError, setPasswordError] = useState('');
 
   useEffect(() => {
     const checkRoleAndFetch = async () => {
@@ -181,18 +182,22 @@ export default function AdminProfileScreen() {
   };
 
   const handleChangePassword = async () => {
+    setPasswordError('');
+
     if (!currentPassword || !newPassword || !confirmPassword) {
-      Alert.alert('Error', 'All password fields are required');
+      setPasswordError('All password fields are required');
       return;
     }
 
     if (newPassword !== confirmPassword) {
-      Alert.alert('Error', 'New passwords do not match');
+      setPasswordError('New passwords do not match');
       return;
     }
 
-    if (newPassword.length < 8) {
-      Alert.alert('Error', 'New password must be at least 8 characters long');
+    // Password complexity regex
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).{8,}$/;
+    if (!passwordRegex.test(newPassword)) {
+      setPasswordError('Password must be 8+ chars with uppercase, lowercase, number, and special character');
       return;
     }
 
@@ -218,14 +223,14 @@ export default function AdminProfileScreen() {
         throw new Error(data.message || 'Failed to change password');
       }
 
-      Alert.alert('Success', 'Password updated successfully');
+      Alert.alert('Success', 'Admin password updated successfully.');
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
       setShowPasswordSection(false);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to change password';
-      Alert.alert('Error', message);
+      setPasswordError(message);
     } finally {
       setIsChangingPassword(false);
     }
@@ -240,6 +245,7 @@ export default function AdminProfileScreen() {
     setCurrentPassword('');
     setNewPassword('');
     setConfirmPassword('');
+    setPasswordError('');
   };
 
   const handleLogout = async () => {
@@ -414,6 +420,16 @@ export default function AdminProfileScreen() {
                   <View style={styles.passwordSection}>
                     <Text style={styles.passwordSectionTitle}>Update Admin Password</Text>
                     
+                    <Text style={styles.requirementHint}>
+                      Password must be at least 8 characters long and include an uppercase letter, lowercase letter, number, and special character.
+                    </Text>
+
+                    {passwordError ? (
+                      <View style={styles.inlineErrorContainer}>
+                        <Text style={styles.inlineErrorText}>{passwordError}</Text>
+                      </View>
+                    ) : null}
+
                     <View style={styles.formGroup}>
                       <Text style={styles.label}>Current Password</Text>
                       <TextInput
@@ -806,5 +822,26 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 15,
     fontWeight: '700',
+  },
+  requirementHint: {
+    fontSize: 12,
+    color: '#666',
+    marginBottom: 15,
+    lineHeight: 18,
+    fontStyle: 'italic',
+  },
+  inlineErrorContainer: {
+    backgroundColor: '#FFF5F5',
+    padding: 10,
+    borderRadius: 8,
+    marginBottom: 15,
+    borderWidth: 1,
+    borderColor: '#FED7D7',
+  },
+  inlineErrorText: {
+    color: '#C53030',
+    fontSize: 13,
+    fontWeight: '600',
+    textAlign: 'center',
   },
 });
