@@ -40,9 +40,10 @@ export default function AdminCreateTourPackScreen() {
       allowsEditing: true,
       aspect: [16, 9],
       quality: 0.8,
+      base64: true,
     });
     if (!result.canceled) {
-      setImage(result.assets[0]);
+      setImage(`data:image/jpeg;base64,${result.assets[0].base64}`);
     }
   };
 
@@ -56,9 +57,10 @@ export default function AdminCreateTourPackScreen() {
       allowsEditing: true,
       aspect: [16, 9],
       quality: 0.8,
+      base64: true,
     });
     if (!result.canceled) {
-      setImage(result.assets[0]);
+      setImage(`data:image/jpeg;base64,${result.assets[0].base64}`);
     }
   };
 
@@ -83,10 +85,11 @@ export default function AdminCreateTourPackScreen() {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       quality: 0.8,
+      base64: true,
     });
     if (!result.canceled) {
       const newImages = result.assets.map((asset: any, index: number) => ({
-        uri: asset.uri,
+        uri: `data:image/jpeg;base64,${asset.base64}`,
         id: Date.now() + index,
       }));
       setGallery(prev => [...prev, ...newImages]);
@@ -144,57 +147,30 @@ export default function AdminCreateTourPackScreen() {
     if (!validate()) return;
     setLoading(true);
     try {
-      const authHeaders = await getAuthHeaders();
-      const formData = new FormData();
+      const authHeaders = await getAuthHeaders({ 'Content-Type': 'application/json' });
       
-      formData.append('name', form.name);
-      formData.append('description', form.description);
-      formData.append('price', form.price);
-      formData.append('duration', form.duration);
-      formData.append('distance', form.distance);
-      formData.append('maxGroupSize', form.maxGroupSize || '10');
-      formData.append('destination', form.destination);
-      formData.append('category', form.category);
-      formData.append('difficulty', form.difficulty);
-      formData.append('featured', form.featured.toString());
-      
-      if (form.tags) {
-        form.tags.split(',').map(tag => tag.trim()).filter(Boolean).forEach(tag => formData.append('tags[]', tag));
-      }
-      if (form.inclusions) {
-        form.inclusions.split(',').map(i => i.trim()).filter(Boolean).forEach(inc => formData.append('inclusions[]', inc));
-      }
-      form.availabilityDates.forEach(date => formData.append('availabilityDates[]', date));
-
-      if (image) {
-        if (Platform.OS === 'web') {
-          const res = await fetch(image.uri);
-          const blob = await res.blob();
-          formData.append('image', blob, 'cover.jpg');
-        } else {
-          const filename = image.uri.split('/').pop();
-          const match = /\.(\w+)$/.exec(filename ?? '');
-          const type = match ? `image/${match[1]}` : 'image/jpeg';
-          formData.append('image', { uri: image.uri, name: filename, type } as any);
-        }
-      }
-
-      for (let i = 0; i < gallery.length; i++) {
-        const img = gallery[i];
-        if (Platform.OS === 'web') {
-          const res = await fetch(img.uri);
-          const blob = await res.blob();
-          formData.append('gallery', blob, `gallery-${i}.jpg`);
-        } else {
-          const filename = img.uri?.split('/').pop() || `img-${i}.jpg`;
-          formData.append('gallery', { uri: img.uri, name: filename, type: 'image/jpeg' } as any);
-        }
-      }
+      const payload = {
+        name: form.name,
+        description: form.description,
+        price: Number(form.price),
+        duration: Number(form.duration),
+        distance: Number(form.distance),
+        maxGroupSize: Number(form.maxGroupSize || '10'),
+        destination: form.destination,
+        category: form.category,
+        difficulty: form.difficulty,
+        featured: form.featured,
+        tags: form.tags ? form.tags.split(',').map(tag => tag.trim()).filter(Boolean) : [],
+        inclusions: form.inclusions ? form.inclusions.split(',').map(i => i.trim()).filter(Boolean) : [],
+        availabilityDates: form.availabilityDates,
+        image: image, // This is now a base64 string
+        gallery: gallery.map(img => ({ url: img.uri, caption: '', isFeatured: false }))
+      };
 
       const response = await fetch(`${API_BASE}/api/tourpacks`, {
         method: 'POST',
         headers: authHeaders,
-        body: formData,
+        body: JSON.stringify(payload),
       });
 
       const data = await response.json();
@@ -236,7 +212,7 @@ export default function AdminCreateTourPackScreen() {
         <TouchableOpacity style={styles.imagePickerCard} onPress={showImageOptions}>
           {image ? (
             <>
-              <Image source={{ uri: image.uri }} style={styles.imagePreview} contentFit="cover" />
+              <Image source={{ uri: image || undefined }} style={styles.imagePreview} contentFit="cover" />
               <View style={styles.editImageOverlay}>
                 <Ionicons name="camera" size={24} color="#FFF" />
                 <Text style={styles.editImageText}>Change Cover</Text>
@@ -259,7 +235,7 @@ export default function AdminCreateTourPackScreen() {
           </TouchableOpacity>
           {gallery.map((img) => (
             <View key={img.id} style={styles.galleryThumbWrap}>
-              <Image source={{ uri: img.uri }} style={styles.galleryThumb} contentFit="cover" />
+              <Image source={{ uri: img.uri || undefined }} style={styles.galleryThumb} contentFit="cover" />
               <TouchableOpacity style={styles.removeGalleryBtn} onPress={() => removeFromGallery(img.id)}>
                 <Ionicons name="close-circle" size={24} color="#E53935" />
               </TouchableOpacity>

@@ -2,55 +2,17 @@ const TourPack = require('../models/TourPack');
 
 exports.createTourPack = async (req, res) => {
   try {
-    console.log('Create request received');
-    console.log('Files:', req.files ? req.files.length : 'none');
+    console.log('📩 [POST] /api/tourpacks - Request Received');
     
-    const cleanBody = { ...req.body };
-    
-    // Map array fields from FormData
-    if (cleanBody['tags[]']) {
-      cleanBody.tags = Array.isArray(cleanBody['tags[]']) ? cleanBody['tags[]'] : [cleanBody['tags[]']];
-      delete cleanBody['tags[]'];
-    }
-    if (cleanBody['inclusions[]']) {
-      cleanBody.inclusions = Array.isArray(cleanBody['inclusions[]']) ? cleanBody['inclusions[]'] : [cleanBody['inclusions[]']];
-      delete cleanBody['inclusions[]'];
-    }
-    if (cleanBody['availabilityDates[]']) {
-      cleanBody.availabilityDates = Array.isArray(cleanBody['availabilityDates[]']) ? cleanBody['availabilityDates[]'] : [cleanBody['availabilityDates[]']];
-      delete cleanBody['availabilityDates[]'];
-    }
-
-    const tourPack = new TourPack(cleanBody);
-    
-    // Separate image and gallery files
-    if (req.files && Array.isArray(req.files)) {
-      const imageFile = req.files.find(f => f.fieldname === 'image');
-      const galleryFiles = req.files.filter(f => f.fieldname === 'gallery');
-      
-      // Attach featured image
-      if (imageFile) {
-        tourPack.image = `/uploads/${imageFile.filename}`;
-        console.log('Featured image:', tourPack.image);
-      }
-      
-      // Attach gallery images
-      if (galleryFiles.length > 0) {
-        tourPack.gallery = galleryFiles.map(file => ({
-          url: `/uploads/${file.filename}`,
-          caption: '',
-          isFeatured: false
-        }));
-        console.log(`Gallery images attached: ${tourPack.gallery.length}`);
-      }
-    }
+    // The body should already contain tags, inclusions, and availabilityDates as arrays
+    // and image/gallery as base64 strings/objects because we are sending JSON from frontend.
+    const tourPack = new TourPack(req.body);
     
     const saved = await tourPack.save();
-    console.log('Package created:', saved._id);
+    console.log('✅ Package created:', saved._id);
     res.status(201).json({ success: true, data: saved });
   } catch (error) {
-    console.error('Create error:', error.message);
-    console.error('Stack:', error.stack);
+    console.error('❌ Create error:', error.message);
     res.status(500).json({ success: false, message: error.message });
   }
 };
@@ -96,80 +58,23 @@ exports.getTourPackById = async (req, res) => {
 
 exports.updateTourPack = async (req, res) => {
   try {
-    console.log('Update request received for:', req.params.id);
-    console.log('Files:', req.files ? req.files.length : 'none');
+    console.log('📩 [PUT] /api/tourpacks - Request Received for:', req.params.id);
 
-    const existingPack = await TourPack.findById(req.params.id);
-    if (!existingPack) return res.status(404).json({ success: false, message: 'Tour pack not found' });
+    const tourPack = await TourPack.findById(req.params.id);
+    if (!tourPack) {
+      return res.status(404).json({ success: false, message: 'Tour pack not found' });
+    }
 
-    let retainedGallery = null;
-    if (typeof req.body.retainedGalleryJson === 'string') {
-      try {
-        const parsed = JSON.parse(req.body.retainedGalleryJson);
-        if (Array.isArray(parsed)) {
-          retainedGallery = parsed
-            .filter(item => item && typeof item.url === 'string')
-            .map(item => ({
-              url: item.url,
-              caption: typeof item.caption === 'string' ? item.caption : '',
-              isFeatured: Boolean(item.isFeatured)
-            }));
-        }
-      } catch (parseError) {
-        console.error('Failed to parse retainedGalleryJson:', parseError.message);
-      }
-    }
+    const updated = await TourPack.findByIdAndUpdate(
+      req.params.id, 
+      req.body, 
+      { new: true, runValidators: true }
+    );
     
-    const updateData = { ...req.body };
-    delete updateData.retainedGalleryJson;
-    
-    // Map array fields from FormData
-    if (updateData['tags[]']) {
-      updateData.tags = Array.isArray(updateData['tags[]']) ? updateData['tags[]'] : [updateData['tags[]']];
-      delete updateData['tags[]'];
-    }
-    if (updateData['inclusions[]']) {
-      updateData.inclusions = Array.isArray(updateData['inclusions[]']) ? updateData['inclusions[]'] : [updateData['inclusions[]']];
-      delete updateData['inclusions[]'];
-    }
-    if (updateData['availabilityDates[]']) {
-      updateData.availabilityDates = Array.isArray(updateData['availabilityDates[]']) ? updateData['availabilityDates[]'] : [updateData['availabilityDates[]']];
-      delete updateData['availabilityDates[]'];
-    }
-    
-    // Separate image and gallery files
-    if (req.files && Array.isArray(req.files)) {
-      const imageFile = req.files.find(f => f.fieldname === 'image');
-      const galleryFiles = req.files.filter(f => f.fieldname === 'gallery');
-      
-      // Update featured image if provided
-      if (imageFile) {
-        updateData.image = `/uploads/${imageFile.filename}`;
-        console.log('Featured image updated:', updateData.image);
-      }
-      
-      // Update gallery if new files provided
-      if (galleryFiles.length > 0 || retainedGallery !== null) {
-        const newGalleryItems = galleryFiles.map(file => ({
-          url: `/uploads/${file.filename}`,
-          caption: '',
-          isFeatured: false
-        }));
-
-        const existingGallery = Array.isArray(existingPack.gallery) ? existingPack.gallery : [];
-        const baseGallery = retainedGallery !== null ? retainedGallery : existingGallery;
-        updateData.gallery = [...baseGallery, ...newGalleryItems];
-        console.log(`Gallery appended with ${newGalleryItems.length} images (total: ${updateData.gallery.length})`);
-      }
-    }
-    
-    const updated = await TourPack.findByIdAndUpdate(req.params.id, updateData, { new: true, runValidators: false });
-    
-    console.log('Package updated successfully');
+    console.log('✅ Package updated successfully');
     res.status(200).json({ success: true, data: updated });
   } catch (error) {
-    console.error('Update error:', error.message);
-    console.error('Stack:', error.stack);
+    console.error('❌ Update error:', error.message);
     res.status(500).json({ success: false, message: error.message });
   }
 };

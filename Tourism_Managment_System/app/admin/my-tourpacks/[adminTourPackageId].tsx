@@ -11,6 +11,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { adminTourPacksEditRoute, adminTourPacksListRoute } from '../../../src/routes/adminTourpacks';
 import { API_BASE } from '../../../src/config';
 import { getAuthHeaders } from '../../../src/auth';
+import { resolveImageUrl } from '../../../src/utils';
 
 const { width } = Dimensions.get('window');
 
@@ -158,7 +159,7 @@ export default function AdminTourPackDetailScreen() {
           <Image
             source={
               tourPack.image
-                ? { uri: `${API_BASE}${tourPack.image}` }
+                ? { uri: resolveImageUrl(tourPack.image) ?? undefined }
                 : require('@/assets/images/travel-hero.png')
             }
             style={styles.heroImage}
@@ -227,7 +228,7 @@ export default function AdminTourPackDetailScreen() {
                     setIsGalleryViewerVisible(true);
                   }}
                 >
-                  <Image source={{ uri: `${API_BASE}${item.url}` }} style={styles.galleryThumb} contentFit="cover" />
+                  <Image source={{ uri: resolveImageUrl(item.url) ?? undefined }} style={styles.galleryThumb} contentFit="cover" />
                 </TouchableOpacity>
               ))}
             </ScrollView>
@@ -273,7 +274,7 @@ export default function AdminTourPackDetailScreen() {
             <Ionicons name="close" size={30} color="#FFF" />
           </TouchableOpacity>
           <Image 
-            source={{ uri: `${API_BASE}${tourPack.gallery[selectedGalleryIndex]?.url}` }} 
+            source={{ uri: resolveImageUrl(tourPack.gallery[selectedGalleryIndex]?.url) ?? undefined }} 
             style={styles.modalImage} 
             contentFit="contain" 
           />

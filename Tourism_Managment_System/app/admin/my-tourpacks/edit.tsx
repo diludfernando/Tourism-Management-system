@@ -12,6 +12,7 @@ import * as ImagePicker from 'expo-image-picker';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { API_BASE } from '../../../src/config';
 import { getAuthHeaders } from '../../../src/auth';
+import { resolveImageUrl } from '../../../src/utils';
 import { adminTourPackDetailRoute } from '../../../src/routes/adminTourpacks';
 
 export default function AdminEditTourPackScreen() {
@@ -29,6 +30,7 @@ export default function AdminEditTourPackScreen() {
     duration: '', distance: '', maxGroupSize: '', destination: '',
     inclusions: '', availabilityDates: [] as string[],
     category: '', tags: '', featured: false, difficulty: 'moderate',
+    image: '',
   });
   const [errors, setErrors] = useState<any>({});
   const [error, setError] = useState('');
@@ -64,13 +66,14 @@ export default function AdminEditTourPackScreen() {
             tags: Array.isArray(pack.tags) ? pack.tags.join(', ') : '',
             featured: pack.featured || false,
             difficulty: pack.difficulty || 'moderate',
+            image: pack.image || '',
           });
-          setCurrentImageUri(pack.image ? `${API_BASE}${pack.image}` : '');
+          setCurrentImageUri(resolveImageUrl(pack.image) || '');
           setGallery(
             Array.isArray(pack.gallery)
               ? pack.gallery.map((img: any, index: number) => ({
                   id: `existing-${index}-${img.url}`,
-                  uri: `${API_BASE}${img.url}`,
+                  uri: resolveImageUrl(img.url) || '',
                   url: img.url,
                   caption: img.caption || '',
                   isFeatured: Boolean(img.isFeatured),
@@ -103,10 +106,10 @@ export default function AdminEditTourPackScreen() {
       allowsEditing: true,
       aspect: [16, 9],
       quality: 0.8,
+      base64: true,
     });
-
     if (!result.canceled) {
-      setSelectedImage(result.assets[0]);
+      setSelectedImage(`data:image/jpeg;base64,${result.assets[0].base64}`);
     }
   };
 
@@ -121,10 +124,10 @@ export default function AdminEditTourPackScreen() {
       allowsEditing: true,
       aspect: [16, 9],
       quality: 0.8,
+      base64: true,
     });
-
     if (!result.canceled) {
-      setSelectedImage(result.assets[0]);
+      setSelectedImage(`data:image/jpeg;base64,${result.assets[0].base64}`);
     }
   };
 
@@ -149,13 +152,15 @@ export default function AdminEditTourPackScreen() {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       quality: 0.8,
+      base64: true,
     });
     if (!result.canceled) {
       const newImages = result.assets.map((asset: any, index: number) => ({
-        uri: asset.uri,
+        uri: `data:image/jpeg;base64,${asset.base64}`,
         caption: '',
         isFeatured: false,
         id: Date.now() + index,
+        existing: false,
       }));
       setGallery(prev => [...prev, ...newImages]);
     }
@@ -213,66 +218,36 @@ export default function AdminEditTourPackScreen() {
     setSaving(true);
 
     try {
-      const formData = new FormData();
-      formData.append('name', form.name);
-      formData.append('description', form.description);
-      formData.append('price', form.price);
-      formData.append('duration', form.duration);
-      formData.append('distance', form.distance);
-      formData.append('maxGroupSize', form.maxGroupSize || '10');
-      formData.append('destination', form.destination);
-      
-      if (form.inclusions) {
-        form.inclusions.split(',').map(i => i.trim()).filter(Boolean).forEach(inc => formData.append('inclusions[]', inc));
-      }
-      form.availabilityDates.forEach(date => formData.append('availabilityDates[]', date));
-      if (form.category) formData.append('category', form.category);
-      formData.append('difficulty', form.difficulty);
-      if (form.tags) {
-        form.tags.split(',').map(t => t.trim()).filter(Boolean).forEach(tag => formData.append('tags[]', tag));
-      }
-      formData.append('featured', form.featured ? 'true' : 'false');
-
-      const retainedExistingGallery = gallery
-        .filter(img => img.existing && img.url)
-        .map(img => ({
-          url: img.url,
+      const payload = {
+        name: form.name,
+        description: form.description,
+        price: Number(form.price),
+        duration: Number(form.duration),
+        distance: Number(form.distance),
+        maxGroupSize: Number(form.maxGroupSize || '10'),
+        destination: form.destination,
+        category: form.category,
+        difficulty: form.difficulty,
+        featured: form.featured,
+        tags: form.tags ? form.tags.split(',').map(tag => tag.trim()).filter(Boolean) : [],
+        inclusions: form.inclusions ? form.inclusions.split(',').map(i => i.trim()).filter(Boolean) : [],
+        availabilityDates: form.availabilityDates,
+        image: selectedImage || form.image, // Use new base64 or keep existing path/data
+        gallery: gallery.map(img => ({
+          url: img.existing ? img.url : img.uri,
           caption: img.caption || '',
-          isFeatured: Boolean(img.isFeatured),
-        }));
-      formData.append('retainedGalleryJson', JSON.stringify(retainedExistingGallery));
+          isFeatured: Boolean(img.isFeatured)
+        }))
+      };
 
-      if (selectedImage) {
-        if (Platform.OS === 'web') {
-          const res = await fetch(selectedImage.uri);
-          const blob = await res.blob();
-          formData.append('image', blob, 'cover.jpg');
-        } else {
-          const filename = selectedImage.uri.split('/').pop();
-          const match = /\.(\w+)$/.exec(filename ?? '');
-          const type = match ? `image/${match[1]}` : 'image/jpeg';
-          formData.append('image', { uri: selectedImage.uri, name: filename, type } as any);
-        }
-      }
+      // Note: We need to make sure 'image' is preserved if not changed
+      // The current state doesn't have form.image, let's fix that in fetch effect.
 
-      const newGallery = gallery.filter(img => !img.existing);
-      for (let i = 0; i < newGallery.length; i++) {
-        const img = newGallery[i];
-        if (Platform.OS === 'web') {
-          const res = await fetch(img.uri);
-          const blob = await res.blob();
-          formData.append('gallery', blob, `gallery-${i}.jpg`);
-        } else {
-          const filename = img.uri?.split('/').pop() || `img-${i}.jpg`;
-          formData.append('gallery', { uri: img.uri, name: filename, type: 'image/jpeg' } as any);
-        }
-      }
-
-      const authHeaders = await getAuthHeaders();
+      const authHeaders = await getAuthHeaders({ 'Content-Type': 'application/json' });
       const response = await fetch(`${API_BASE}/api/tourpacks/${tourPackId}`, {
         method: 'PUT',
         headers: authHeaders,
-        body: formData,
+        body: JSON.stringify(payload),
       });
       
       const data = await response.json();
@@ -334,7 +309,7 @@ export default function AdminEditTourPackScreen() {
           {selectedImage || currentImageUri ? (
             <>
               <Image
-                source={selectedImage ? { uri: selectedImage.uri } : { uri: currentImageUri }}
+                source={selectedImage ? { uri: selectedImage } : { uri: currentImageUri || undefined }}
                 style={styles.imagePreview}
                 contentFit="cover"
               />
@@ -360,7 +335,7 @@ export default function AdminEditTourPackScreen() {
           </TouchableOpacity>
           {gallery.map((img) => (
             <View key={img.id} style={styles.galleryThumbWrap}>
-              <Image source={{ uri: img.uri }} style={styles.galleryThumb} contentFit="cover" />
+              <Image source={{ uri: img.uri || undefined }} style={styles.galleryThumb} contentFit="cover" />
               <TouchableOpacity style={styles.removeGalleryBtn} onPress={() => removeFromGallery(img.id)}>
                 <Ionicons name="close-circle" size={24} color="#E53935" />
               </TouchableOpacity>

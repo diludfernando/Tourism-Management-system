@@ -8,6 +8,7 @@ import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { tourPackDetailRoute } from '../../src/routes/tourpacks';
 import { API_BASE } from '../../src/config';
+import { resolveImageUrl } from '../../src/utils';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 const API_URL = `${API_BASE}/api/tourpacks`;
@@ -146,7 +147,7 @@ export default function TourPackList() {
       <Image
         source={
           item.image
-            ? { uri: `${API_BASE}${item.image}` }
+            ? { uri: resolveImageUrl(item.image) ?? undefined }
             : require('@/assets/images/travel-hero.png')
         }
         style={styles.cardBg}
@@ -210,7 +211,7 @@ export default function TourPackList() {
             <View style={styles.headerTextBlock}>
               <Text style={styles.headerSub}>LUXE TRAVEL</Text>
               <Text style={styles.headerTitle}>Tour Packages</Text>
-              <Text style={styles.headerDesc}>Discover Sri Lanka&apos;s finest experiences</Text>
+              <Text style={styles.headerDesc}>Discover Sri Lanka's finest experiences</Text>
             </View>
           </View>
         </SafeAreaView>
