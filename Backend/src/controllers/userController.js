@@ -262,11 +262,12 @@ const updateProfile = async (req, res) => {
       }
     }
 
-    // Handle profile photo upload
+    // Handle profile photo upload (Store as Base64 in Database)
     if (req.file) {
-      const photoPath = `/uploads/${req.file.filename}`;
-      updateData.profilePhoto = photoPath;
-      console.log('Profile photo will be updated to:', photoPath);
+      const base64Image = req.file.buffer.toString('base64');
+      const photoData = `data:${req.file.mimetype};base64,${base64Image}`;
+      updateData.profilePhoto = photoData;
+      console.log('Profile photo will be updated as Base64 in DB');
     }
 
     // If no changes, return current data

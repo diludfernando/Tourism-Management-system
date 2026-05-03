@@ -5,16 +5,8 @@ const router = express.Router();
 const { authUser, registerUser, getUsers, deleteUser, getCurrentUser, updateProfile, getUserById, updateUser, updateUserStatus, changePassword, forgotPassword, verifyOTP, resetPasswordWithOTP } = require('../controllers/userController');
 const { protect, adminOnly } = require('../middleware/authMiddleware');
 
-// Configure multer for file uploads
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, path.join(__dirname, '../uploads'));
-  },
-  filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, 'profile-' + uniqueSuffix + path.extname(file.originalname));
-  },
-});
+// Configure multer for memory storage (for storing in database)
+const storage = multer.memoryStorage();
 
 const fileFilter = (req, file, cb) => {
   const allowedMimes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
