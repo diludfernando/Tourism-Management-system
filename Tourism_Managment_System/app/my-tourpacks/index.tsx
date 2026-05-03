@@ -1,9 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity, ScrollView,
-  ActivityIndicator, RefreshControl, TextInput
+  ActivityIndicator, RefreshControl, TextInput, Image
 } from 'react-native';
-import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { tourPackDetailRoute } from '../../src/routes/tourpacks';
@@ -151,8 +150,7 @@ export default function TourPackList() {
             : require('@/assets/images/travel-hero.png')
         }
         style={styles.cardBg}
-        contentFit="cover"
-        transition={600}
+        resizeMode="cover"
       />
 
       {/* Gradient Overlay */}
@@ -200,7 +198,7 @@ export default function TourPackList() {
         <Image
           source={require('@/assets/images/travel-hero.png')}
           style={styles.headerBg}
-          contentFit="cover"
+          resizeMode="cover"
         />
         <View style={styles.headerOverlay} />
         <SafeAreaView>

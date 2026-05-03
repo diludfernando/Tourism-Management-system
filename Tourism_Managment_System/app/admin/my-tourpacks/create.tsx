@@ -336,6 +336,19 @@ export default function AdminCreateTourPackScreen() {
             </TouchableOpacity>
           </View>
 
+          <Text style={styles.label}>Difficulty Level</Text>
+          <View style={styles.datesGrid}>
+            {['easy', 'moderate', 'hard'].map((level) => (
+              <TouchableOpacity
+                key={level}
+                style={[styles.dateChip, form.difficulty === level ? { backgroundColor: '#003580' } : { backgroundColor: '#A0AEC0' }]}
+                onPress={() => update('difficulty', level)}
+              >
+                <Text style={styles.dateChipText}>{level.charAt(0).toUpperCase() + level.slice(1)}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
           <View style={styles.featuredRow}>
             <Text style={styles.label}>Mark as Featured</Text>
             <Switch

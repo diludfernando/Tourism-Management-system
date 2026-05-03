@@ -43,7 +43,7 @@ export default function AdminFeedbackScreen() {
       const response = await fetch(url, { headers });
       if (response.ok) {
         const data = await response.json();
-        setFeedbacks(data);
+        setFeedbacks(data.data || []);
       }
     } catch (error) {
       console.error('Failed to fetch feedbacks', error);

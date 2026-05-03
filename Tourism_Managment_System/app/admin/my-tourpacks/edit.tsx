@@ -65,7 +65,7 @@ export default function AdminEditTourPackScreen() {
             category: pack.category || '',
             tags: Array.isArray(pack.tags) ? pack.tags.join(', ') : '',
             featured: pack.featured || false,
-            difficulty: pack.difficulty || 'moderate',
+            difficulty: ['easy', 'moderate', 'hard'].includes(pack.difficulty) ? pack.difficulty : 'moderate',
             image: pack.image || '',
           });
           setCurrentImageUri(resolveImageUrl(pack.image) || '');
@@ -436,6 +436,19 @@ export default function AdminEditTourPackScreen() {
               <Ionicons name="calendar-outline" size={18} color="#003580" />
               <Text style={styles.addDateBtnText}>Add Date</Text>
             </TouchableOpacity>
+          </View>
+
+          <Text style={styles.label}>Difficulty Level</Text>
+          <View style={styles.datesGrid}>
+            {['easy', 'moderate', 'hard'].map((level) => (
+              <TouchableOpacity
+                key={level}
+                style={[styles.dateChip, form.difficulty === level ? { backgroundColor: '#003580' } : { backgroundColor: '#A0AEC0' }]}
+                onPress={() => update('difficulty', level)}
+              >
+                <Text style={styles.dateChipText}>{level.charAt(0).toUpperCase() + level.slice(1)}</Text>
+              </TouchableOpacity>
+            ))}
           </View>
 
           <View style={styles.featuredRow}>

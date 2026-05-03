@@ -1,14 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity, ScrollView,
-  ActivityIndicator, RefreshControl, TextInput, SafeAreaView, Platform
+  ActivityIndicator, RefreshControl, TextInput, SafeAreaView, Platform, Image
 } from 'react-native';
-import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { adminTourPackDetailRoute, adminTourPacksCreateRoute } from '../../../src/routes/adminTourpacks';
 import { API_BASE } from '../../../src/config';
+import { resolveImageUrl } from '../../../src/utils';
 
 const API_URL = `${API_BASE}/api/tourpacks`;
 
@@ -131,13 +131,12 @@ export default function TourPackList() {
       <View style={styles.cardHero}>
         <Image
           source={
-            item.image
-              ? { uri: `${API_BASE}${item.image}` }
+            item.image && resolveImageUrl(item.image)
+              ? { uri: resolveImageUrl(item.image) as string }
               : require('@/assets/images/travel-hero.png')
           }
           style={styles.heroImage}
-          contentFit="cover"
-          transition={500}
+          resizeMode="cover"
         />
         <View style={styles.heroOverlay} />
         

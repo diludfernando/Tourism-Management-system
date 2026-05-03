@@ -355,11 +355,11 @@ export default function AdminProfileScreen() {
               <View style={styles.avatarContainer}>
                 {selectedPhoto ? (
                   <Image source={{ uri: selectedPhoto }} style={styles.profileImage} />
-                ) : user.profilePhoto ? (
-                  <Image source={{ uri: resolveImageUrl(user.profilePhoto) ?? undefined }} style={styles.profileImage} />
+                ) : user.profilePhoto && resolveImageUrl(user.profilePhoto) ? (
+                  <Image source={{ uri: resolveImageUrl(user.profilePhoto) as string }} style={styles.profileImage} />
                 ) : (
                   <View style={styles.avatar}>
-                    <Text style={styles.avatarText}>{editedName.charAt(0).toUpperCase()}</Text>
+                    <Text style={styles.avatarText}>{(editedName || 'A').charAt(0).toUpperCase()}</Text>
                   </View>
                 )}
               </View>
