@@ -1,7 +1,7 @@
 import { Platform } from 'react-native';
 import Constants from 'expo-constants';
 
-const defaultBase = 'http://localhost:5000';
+const defaultBase = 'https://tourism-management-system-production-8ca3.up.railway.app';
 const androidEmulatorBase = 'http://10.0.2.2:5000';
 
 const extraApiBase =
