@@ -23,25 +23,24 @@ export default function AdminScreen() {
 
   useEffect(() => {
     const verifyRole = async () => {
-      if (admin !== 'true') {
-        setIsAdminMode(false);
-        setHasVerifiedRole(true);
-        router.replace('/explore');
-        return;
-      }
-
+      console.log('[Admin] Verifying role...');
       const role = await getAuthRole();
+      console.log('[Admin] Role found:', role);
+      
       const allowed = role === 'admin';
       setIsAdminMode(allowed);
       setHasVerifiedRole(true);
 
       if (!allowed) {
+        console.log('[Admin] Access denied, redirecting to explore...');
         router.replace('/explore');
+      } else {
+        console.log('[Admin] Access granted.');
       }
     };
 
     verifyRole();
-  }, [admin, router]);
+  }, [router]);
 
   useFocusEffect(
     useCallback(() => {
@@ -53,7 +52,7 @@ export default function AdminScreen() {
           const bookingsResponse = await fetch(API_URL, { headers });
           const bookingsData = await bookingsResponse.json();
           if (bookingsResponse.ok) {
-            setBookings(bookingsData);
+            setBookings(bookingsData.data || []);
           }
 
           // Fetch user profile for the icon

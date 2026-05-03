@@ -196,7 +196,7 @@ export default function HotelListScreen() {
               router.push({
                 pathname: '/hotel-details',
                 params: {
-                  id: item._id,
+                  id: String(item._id),
                   ...(isAdminMode ? { admin: 'true' } : {}),
                   ...(transportId ? { transportId } : {}),
                   ...(tourPackId ? { tourPackId } : {}),

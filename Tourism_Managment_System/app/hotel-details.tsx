@@ -57,6 +57,9 @@ export default function HotelDetailsScreen() {
     admin?: string;
     persons?: string;
   }>();
+
+  console.log('[HotelDetails] Params:', { id, transportId, tourPackId, admin, persons });
+
   const [hotel, setHotel] = useState<Hotel | null>(null);
   const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(true);
@@ -115,7 +118,8 @@ export default function HotelDetailsScreen() {
       const response = await fetch(`${API_BASE}/api/feedback/target/${id}`);
       if (response.ok) {
         const data = await response.json();
-        setReviews(data);
+        console.log('[HotelDetails] Reviews fetched:', data.count);
+        setReviews(data.data || []);
       }
     } catch (err) {
       console.error('Failed to fetch reviews', err);

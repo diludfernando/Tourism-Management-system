@@ -36,6 +36,7 @@ export default function LoginScreen() {
     setErrorMsg('');
     setLoading(true);
     try {
+      console.log('[Login] Attempting login for:', email);
       const response = await fetch(`${API_URL}/login`, {
         method: 'POST',
         headers: {
@@ -45,21 +46,26 @@ export default function LoginScreen() {
       });
 
       const data = await response.json();
+      console.log('[Login] Server response status:', response.status);
 
       if (response.ok) {
         // Save the token and role
+        console.log('[Login] Success! Role:', data.role);
         await saveAuthSession(data.token, data.role);
-        console.log('✅ Login successful:', data.email, 'Role:', data.role);
+        
         if (data.role === 'admin') {
+          console.log('[Login] Redirecting to admin dashboard...');
           router.replace({ pathname: '/admin', params: { admin: 'true' } });
         } else {
+          console.log('[Login] Redirecting to explore...');
           router.replace('/explore');
         }
       } else {
+        console.log('[Login] Failed:', data.message || 'Invalid credentials');
         setErrorMsg(data.message || 'Invalid credentials');
       }
     } catch (error) {
-      console.error('Login Error:', error);
+      console.error('[Login] Error during fetch:', error);
       setErrorMsg('Unable to connect to server.');
     } finally {
       setLoading(false);
