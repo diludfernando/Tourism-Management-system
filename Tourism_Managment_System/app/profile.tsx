@@ -621,6 +621,7 @@ export default function UserProfileScreen() {
           >
             <Text style={[styles.tabText, activeTab === 'bookings' && styles.activeTabText]}>My Bookings</Text>
           </TouchableOpacity>
+          <TouchableOpacity
             style={[styles.tab, activeTab === 'reviews' && styles.activeTab]}
             onPress={() => setActiveTab('reviews')}
           >
