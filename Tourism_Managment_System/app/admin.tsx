@@ -4,6 +4,7 @@ import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { API_BASE } from '../src/config';
+import { resolveImageUrl } from '../src/utils';
 import { clearAuthSession, getAuthHeaders, getAuthRole } from '../src/auth';
 
 const API_URL = `${API_BASE}/api/bookings`;
@@ -100,10 +101,11 @@ export default function AdminScreen() {
         >
           {userProfile?.profilePhoto ? (
             <Image 
-              source={{ uri: `${API_BASE}${userProfile.profilePhoto}` }} 
+              source={{ uri: resolveImageUrl(userProfile.profilePhoto) ?? undefined }} 
               style={styles.profileImage}
               contentFit="cover"
               transition={300}
+              onError={() => setUserProfile((current) => current)}
             />
           ) : (
             <Ionicons name="person-circle-outline" size={32} color="#FF6B35" />
