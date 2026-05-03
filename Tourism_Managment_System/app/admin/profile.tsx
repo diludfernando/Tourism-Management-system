@@ -15,6 +15,7 @@ import {
 import { useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import { API_BASE } from '../../src/config';
+import { resolveImageUrl } from '../../src/utils';
 import { getAuthToken, getAuthRole, clearAuthSession } from '../../src/auth';
 
 interface UserProfile {
@@ -355,7 +356,7 @@ export default function AdminProfileScreen() {
                 {selectedPhoto ? (
                   <Image source={{ uri: selectedPhoto }} style={styles.profileImage} />
                 ) : user.profilePhoto ? (
-                  <Image source={{ uri: `${API_BASE}${user.profilePhoto}` }} style={styles.profileImage} />
+                  <Image source={{ uri: resolveImageUrl(user.profilePhoto) ?? undefined }} style={styles.profileImage} />
                 ) : (
                   <View style={styles.avatar}>
                     <Text style={styles.avatarText}>{editedName.charAt(0).toUpperCase()}</Text>
