@@ -19,4 +19,4 @@ const lanBase = host ? `http://${host}:5000` : undefined;
 const emulatorBase =
   Platform.OS === 'android' && !Constants.isDevice ? androidEmulatorBase : undefined;
 
-export const API_BASE = extraApiBase || emulatorBase || defaultBase || lanBase;
+export const API_BASE = extraApiBase || defaultBase;
