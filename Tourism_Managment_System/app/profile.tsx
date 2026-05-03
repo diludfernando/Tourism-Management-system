@@ -99,7 +99,7 @@ export default function UserProfileScreen() {
   const [editedName, setEditedName] = useState('');
   const [editedPhone, setEditedPhone] = useState('');
   const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null);
-
+  
   // Password change states
   const [showPasswordSection, setShowPasswordSection] = useState(false);
   const [currentPassword, setCurrentPassword] = useState('');
@@ -114,7 +114,7 @@ export default function UserProfileScreen() {
   const [loadingBookingsList, setLoadingBookingsList] = useState(false);
   const [myReviews, setMyReviews] = useState<Review[]>([]);
   const [loadingReviews, setLoadingReviews] = useState(false);
-
+  
   // Review Modal state
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [reviewType, setReviewType] = useState<'hotel' | 'tourpack' | 'transportation' | 'general'>('hotel');
@@ -274,7 +274,7 @@ export default function UserProfileScreen() {
     try {
       setSubmittingReview(true);
       const token = await getAuthToken();
-
+      
       const booking = availableBookings.find(b => b._id === selectedBooking);
       let targetId = null;
       if (booking) {
@@ -493,7 +493,7 @@ export default function UserProfileScreen() {
 
   const handleLogout = async () => {
     console.log('handleLogout called');
-
+    
     const performLogout = async () => {
       try {
         console.log('Proceeding with logout...');
@@ -575,7 +575,7 @@ export default function UserProfileScreen() {
       <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
         {/* Header */}
         <View style={styles.header}>
-          <TouchableOpacity
+          <TouchableOpacity 
             activeOpacity={0.6}
             style={styles.headerButton}
             onPress={() => {
@@ -586,7 +586,7 @@ export default function UserProfileScreen() {
             <Text style={styles.backButton}>← Back</Text>
           </TouchableOpacity>
           <Text style={styles.title}>My Profile</Text>
-          <TouchableOpacity
+          <TouchableOpacity 
             activeOpacity={0.6}
             style={styles.headerButton}
             onPress={() => (isEditing ? handleCancel() : setIsEditing(true))}
@@ -609,572 +609,572 @@ export default function UserProfileScreen() {
 
         {/* Custom Tab Bar */}
         <View style={styles.tabContainer}>
-          <TouchableOpacity
+          <TouchableOpacity 
             style={[styles.tab, activeTab === 'profile' && styles.activeTab]}
             onPress={() => setActiveTab('profile')}
           >
             <Text style={[styles.tabText, activeTab === 'profile' && styles.activeTabText]}>Profile</Text>
           </TouchableOpacity>
-          <TouchableOpacity
+          <TouchableOpacity 
             style={[styles.tab, activeTab === 'bookings' && styles.activeTab]}
             onPress={() => setActiveTab('bookings')}
           >
             <Text style={[styles.tabText, activeTab === 'bookings' && styles.activeTabText]}>My Bookings</Text>
           </TouchableOpacity>
-          style={[styles.tab, activeTab === 'reviews' && styles.activeTab]}
-          onPress={() => setActiveTab('reviews')}
+            style={[styles.tab, activeTab === 'reviews' && styles.activeTab]}
+            onPress={() => setActiveTab('reviews')}
           >
-          <Text style={[styles.tabText, activeTab === 'reviews' && styles.activeTabText]}>My Reviews</Text>
-        </TouchableOpacity>
-      </View>
+            <Text style={[styles.tabText, activeTab === 'reviews' && styles.activeTabText]}>My Reviews</Text>
+          </TouchableOpacity>
+        </View>
 
-      {user && activeTab === 'profile' && (
-        <View>
-          {/* Profile Card */}
-          <View style={styles.profileCard}>
-            <View style={styles.avatarContainer}>
-              {selectedPhoto ? (
-                <Image source={{ uri: selectedPhoto }} style={styles.profileImage} />
-              ) : user.profilePhoto ? (
-                <Image source={{ uri: `${API_BASE}${user.profilePhoto}` }} style={styles.profileImage} />
-              ) : (
-                <View style={styles.avatar}>
-                  <Text style={styles.avatarText}>{editedName.charAt(0).toUpperCase()}</Text>
-                </View>
-              )}
+        {user && activeTab === 'profile' && (
+          <View>
+            {/* Profile Card */}
+            <View style={styles.profileCard}>
+              <View style={styles.avatarContainer}>
+                {selectedPhoto ? (
+                  <Image source={{ uri: selectedPhoto }} style={styles.profileImage} />
+                ) : user.profilePhoto ? (
+                  <Image source={{ uri: `${API_BASE}${user.profilePhoto}` }} style={styles.profileImage} />
+                ) : (
+                  <View style={styles.avatar}>
+                    <Text style={styles.avatarText}>{editedName.charAt(0).toUpperCase()}</Text>
+                  </View>
+                )}
+              </View>
+              <Text style={styles.userName}>{editedName}</Text>
+              <Text style={styles.userRole}>Regular User</Text>
             </View>
-            <Text style={styles.userName}>{editedName}</Text>
-            <Text style={styles.userRole}>Regular User</Text>
-          </View>
 
-          {/* Details Section */}
-          {isEditing ? (
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Edit Profile</Text>
+            {/* Details Section */}
+            {isEditing ? (
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Edit Profile</Text>
 
-              {/* Change Photo Button */}
-              <View style={styles.formGroup}>
-                <TouchableOpacity
-                  style={styles.changePhotoButton}
-                  onPress={handlePickImage}
-                  activeOpacity={0.7}
-                >
-                  <Text style={styles.changePhotoButtonText}>
-                    {selectedPhoto || user.profilePhoto ? 'Change Photo' : 'Add Photo'}
-                  </Text>
-                </TouchableOpacity>
-              </View>
-
-              <View style={styles.formGroup}>
-                <Text style={styles.label}>Full Name</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="Enter your full name"
-                  value={editedName}
-                  onChangeText={setEditedName}
-                  placeholderTextColor="#999"
-                />
-              </View>
-
-              <View style={styles.formGroup}>
-                <Text style={styles.label}>Phone Number</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="Enter your phone number"
-                  value={editedPhone}
-                  onChangeText={setEditedPhone}
-                  placeholderTextColor="#999"
-                  keyboardType="phone-pad"
-                />
-              </View>
-
-              <TouchableOpacity
-                style={[styles.saveButton, isSaving && styles.buttonDisabled]}
-                onPress={handleSaveProfile}
-                disabled={isSaving}
-              >
-                <Text style={styles.saveButtonText}>{isSaving ? 'Saving...' : 'Save Changes'}</Text>
-              </TouchableOpacity>
-
-              {/* Password Reset Section Toggle */}
-              <TouchableOpacity
-                style={styles.passwordToggle}
-                onPress={() => setShowPasswordSection(!showPasswordSection)}
-              >
-                <Text style={styles.passwordToggleText}>
-                  {showPasswordSection ? 'Cancel Password Change' : 'Change Password'}
-                </Text>
-              </TouchableOpacity>
-
-              {showPasswordSection && (
-                <View style={styles.passwordSection}>
-                  <Text style={styles.passwordSectionTitle}>Update Password</Text>
-
-                  <Text style={styles.requirementHint}>
-                    Password must be at least 8 characters long and include an uppercase letter, lowercase letter, number, and special character.
-                  </Text>
-
-                  {passwordError ? (
-                    <View style={styles.inlineErrorContainer}>
-                      <Text style={styles.inlineErrorText}>{passwordError}</Text>
-                    </View>
-                  ) : null}
-
-                  <View style={styles.formGroup}>
-                    <Text style={styles.label}>Current Password</Text>
-                    <TextInput
-                      style={styles.input}
-                      placeholder="Enter current password"
-                      value={currentPassword}
-                      onChangeText={setCurrentPassword}
-                      secureTextEntry
-                      placeholderTextColor="#999"
-                    />
-                  </View>
-
-                  <View style={styles.formGroup}>
-                    <Text style={styles.label}>New Password</Text>
-                    <TextInput
-                      style={styles.input}
-                      placeholder="Min. 8 characters"
-                      value={newPassword}
-                      onChangeText={setNewPassword}
-                      secureTextEntry
-                      placeholderTextColor="#999"
-                    />
-                  </View>
-
-                  <View style={styles.formGroup}>
-                    <Text style={styles.label}>Confirm New Password</Text>
-                    <TextInput
-                      style={styles.input}
-                      placeholder="Re-type new password"
-                      value={confirmPassword}
-                      onChangeText={setConfirmPassword}
-                      secureTextEntry
-                      placeholderTextColor="#999"
-                    />
-                  </View>
-
-                  <TouchableOpacity
-                    style={[styles.changePasswordButton, isChangingPassword && styles.buttonDisabled]}
-                    onPress={handleChangePassword}
-                    disabled={isChangingPassword}
+                {/* Change Photo Button */}
+                <View style={styles.formGroup}>
+                  <TouchableOpacity 
+                    style={styles.changePhotoButton} 
+                    onPress={handlePickImage}
+                    activeOpacity={0.7}
                   >
-                    <Text style={styles.changePasswordButtonText}>
-                      {isChangingPassword ? 'Updating...' : 'Update Password'}
+                    <Text style={styles.changePhotoButtonText}>
+                      {selectedPhoto || user.profilePhoto ? 'Change Photo' : 'Add Photo'}
                     </Text>
                   </TouchableOpacity>
                 </View>
-              )}
-            </View>
-          ) : (
-            <>
-              <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Contact Information</Text>
 
-                <View style={styles.detailItem}>
-                  <Text style={styles.detailLabel}>Email Address</Text>
-                  <Text style={styles.detailValue}>{user.email}</Text>
+                <View style={styles.formGroup}>
+                  <Text style={styles.label}>Full Name</Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Enter your full name"
+                    value={editedName}
+                    onChangeText={setEditedName}
+                    placeholderTextColor="#999"
+                  />
                 </View>
 
-                <View style={styles.detailItem}>
-                  <Text style={styles.detailLabel}>Phone Number</Text>
-                  <Text style={styles.detailValue}>{user.phoneNumber}</Text>
+                <View style={styles.formGroup}>
+                  <Text style={styles.label}>Phone Number</Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Enter your phone number"
+                    value={editedPhone}
+                    onChangeText={setEditedPhone}
+                    placeholderTextColor="#999"
+                    keyboardType="phone-pad"
+                  />
                 </View>
-              </View>
-
-              {/* Account Section */}
-              <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Account Information</Text>
-
-                <View style={styles.detailItem}>
-                  <Text style={styles.detailLabel}>Account Type</Text>
-                  <Text style={styles.detailValue}>{user.role}</Text>
-                </View>
-
-                <View style={styles.detailItem}>
-                  <Text style={styles.detailLabel}>Member Since</Text>
-                  <Text style={styles.detailValue}>{formatDate(user.createdAt)}</Text>
-                </View>
-
-                <View style={styles.detailItem}>
-                  <Text style={styles.detailLabel}>User ID</Text>
-                  <Text style={styles.detailValue}>{user._id}</Text>
-                </View>
-              </View>
-            </>
-          )}
-
-          {/* Action Buttons */}
-          {!isEditing && (
-            <View style={styles.buttonContainer}>
-              <TouchableOpacity
-                activeOpacity={0.7}
-                style={styles.logoutButton}
-                onPress={() => {
-                  console.log('Logout button pressed');
-                  handleLogout();
-                }}
-              >
-                <Text style={styles.logoutButtonText}>Logout</Text>
-              </TouchableOpacity>
-            </View>
-          )}
-
-          <View style={{ height: 30 }} />
-        </View>
-      )}
-      {user && activeTab === 'bookings' && (
-        <View style={styles.bookingsContainer}>
-          <View style={styles.bookingsHeaderRow}>
-            <View>
-              <Text style={styles.bookingsTitle}>My Reservations</Text>
-              <Text style={styles.bookingsSubtitle}>All your booking details in one place.</Text>
-            </View>
-            <TouchableOpacity style={styles.refreshBookingsButton} onPress={fetchMyBookings}>
-              <Ionicons name="refresh" size={18} color="#007AFF" />
-            </TouchableOpacity>
-          </View>
-
-          {loadingBookingsList ? (
-            <ActivityIndicator size="large" color="#007AFF" style={styles.bookingsLoader} />
-          ) : myBookings.length === 0 ? (
-            <View style={styles.emptyBookingsCard}>
-              <Ionicons name="calendar-clear-outline" size={52} color="#cbd5e1" />
-              <Text style={styles.emptyBookingsTitle}>No bookings yet</Text>
-              <Text style={styles.emptyBookingsMessage}>
-                Your hotel stays, packages, and transportation bookings will appear here.
-              </Text>
-            </View>
-          ) : (
-            myBookings.map((booking) => (
-              <View key={booking._id} style={styles.bookingDetailsCard}>
-                <View style={styles.bookingTopRow}>
-                  <View style={styles.bookingTopLeft}>
-                    <Text style={styles.bookingReference}>{booking.bookingReference}</Text>
-                    <Text style={styles.bookingCreatedDate}>Booked on {formatDate(booking.createdAt)}</Text>
-                  </View>
-                  <View style={styles.bookingBadgeColumn}>
-                    <View style={[styles.statusPill, { backgroundColor: `${getBookingStatusColor(booking.bookingStatus)}18` }]}>
-                      <Text style={[styles.statusPillText, { color: getBookingStatusColor(booking.bookingStatus) }]}>
-                        {booking.bookingStatus.toUpperCase()}
-                      </Text>
-                    </View>
-                    <View style={[styles.statusPill, { backgroundColor: `${getPaymentStatusColor(booking.paymentStatus)}18` }]}>
-                      <Text style={[styles.statusPillText, { color: getPaymentStatusColor(booking.paymentStatus) }]}>
-                        {booking.paymentStatus.replace('_', ' ').toUpperCase()}
-                      </Text>
-                    </View>
-                  </View>
-                </View>
-
-                <View style={styles.bookingSection}>
-                  <Text style={styles.bookingSectionTitle}>Trip Details</Text>
-                  <View style={styles.bookingInfoRow}>
-                    <Text style={styles.bookingInfoLabel}>Destination</Text>
-                    <Text style={styles.bookingInfoValue}>{booking.destination || booking.tourPack?.destination || 'N/A'}</Text>
-                  </View>
-                  <View style={styles.bookingInfoRow}>
-                    <Text style={styles.bookingInfoLabel}>Guest</Text>
-                    <Text style={styles.bookingInfoValue}>{booking.guestName}</Text>
-                  </View>
-                  <View style={styles.bookingInfoRow}>
-                    <Text style={styles.bookingInfoLabel}>Contact</Text>
-                    <Text style={styles.bookingInfoValue}>{booking.email} | {booking.phone}</Text>
-                  </View>
-                  <View style={styles.bookingInfoRow}>
-                    <Text style={styles.bookingInfoLabel}>Party Size</Text>
-                    <Text style={styles.bookingInfoValue}>
-                      {booking.adults} adult(s), {booking.children} child(ren), {booking.guests} guest(s)
-                    </Text>
-                  </View>
-                  <View style={styles.bookingInfoRow}>
-                    <Text style={styles.bookingInfoLabel}>Travel Style</Text>
-                    <Text style={styles.bookingInfoValue}>{booking.travelStyle || 'N/A'}</Text>
-                  </View>
-                </View>
-
-                {(booking.hotel || booking.tourPack || booking.transportation) && (
-                  <View style={styles.bookingSection}>
-                    <Text style={styles.bookingSectionTitle}>Reservation Items</Text>
-                    {booking.hotel && (
-                      <>
-                        <View style={styles.bookingInfoRow}>
-                          <Text style={styles.bookingInfoLabel}>Hotel</Text>
-                          <Text style={styles.bookingInfoValue}>{booking.hotel.name || 'N/A'}</Text>
-                        </View>
-                        <View style={styles.bookingInfoRow}>
-                          <Text style={styles.bookingInfoLabel}>Location</Text>
-                          <Text style={styles.bookingInfoValue}>{booking.hotel.location || 'N/A'}</Text>
-                        </View>
-                      </>
-                    )}
-                    {booking.tourPack && (
-                      <>
-                        <View style={styles.bookingInfoRow}>
-                          <Text style={styles.bookingInfoLabel}>Package</Text>
-                          <Text style={styles.bookingInfoValue}>{booking.tourPack.name || 'N/A'}</Text>
-                        </View>
-                        <View style={styles.bookingInfoRow}>
-                          <Text style={styles.bookingInfoLabel}>Duration</Text>
-                          <Text style={styles.bookingInfoValue}>{booking.tourPack.duration || 'N/A'}</Text>
-                        </View>
-                      </>
-                    )}
-                    {booking.transportation && (
-                      <>
-                        <View style={styles.bookingInfoRow}>
-                          <Text style={styles.bookingInfoLabel}>Transport</Text>
-                          <Text style={styles.bookingInfoValue}>
-                            {[booking.transportation.vehicleType, booking.transportation.brandModel].filter(Boolean).join(' - ') || 'N/A'}
-                          </Text>
-                        </View>
-                        <View style={styles.bookingInfoRow}>
-                          <Text style={styles.bookingInfoLabel}>Plate Number</Text>
-                          <Text style={styles.bookingInfoValue}>{booking.transportation.plateNumber || 'N/A'}</Text>
-                        </View>
-                      </>
-                    )}
-                  </View>
-                )}
-
-                <View style={styles.bookingSection}>
-                  <Text style={styles.bookingSectionTitle}>Schedule & Amounts</Text>
-                  {booking.checkInDate ? (
-                    <View style={styles.bookingInfoRow}>
-                      <Text style={styles.bookingInfoLabel}>Check-in</Text>
-                      <Text style={styles.bookingInfoValue}>{formatDate(booking.checkInDate)}</Text>
-                    </View>
-                  ) : null}
-                  {booking.checkOutDate ? (
-                    <View style={styles.bookingInfoRow}>
-                      <Text style={styles.bookingInfoLabel}>Check-out</Text>
-                      <Text style={styles.bookingInfoValue}>{formatDate(booking.checkOutDate)}</Text>
-                    </View>
-                  ) : null}
-                  <View style={styles.bookingInfoRow}>
-                    <Text style={styles.bookingInfoLabel}>Rooms / Nights</Text>
-                    <Text style={styles.bookingInfoValue}>{booking.rooms} room(s) / {booking.nights} night(s)</Text>
-                  </View>
-                  {booking.stayAmount > 0 && (
-                    <View style={styles.bookingInfoRow}>
-                      <Text style={styles.bookingInfoLabel}>Stay Amount</Text>
-                      <Text style={styles.bookingInfoValue}>{formatMoney(booking.stayAmount)}</Text>
-                    </View>
-                  )}
-                  {booking.packageAmount > 0 && (
-                    <View style={styles.bookingInfoRow}>
-                      <Text style={styles.bookingInfoLabel}>Package Amount</Text>
-                      <Text style={styles.bookingInfoValue}>{formatMoney(booking.packageAmount)}</Text>
-                    </View>
-                  )}
-                  {booking.transportationAmount > 0 && (
-                    <View style={styles.bookingInfoRow}>
-                      <Text style={styles.bookingInfoLabel}>Transportation</Text>
-                      <Text style={styles.bookingInfoValue}>{formatMoney(booking.transportationAmount)}</Text>
-                    </View>
-                  )}
-                  <View style={styles.bookingInfoRow}>
-                    <Text style={styles.bookingInfoLabel}>Service Fee</Text>
-                    <Text style={styles.bookingInfoValue}>{formatMoney(booking.serviceFee)}</Text>
-                  </View>
-                  <View style={[styles.bookingInfoRow, styles.bookingTotalRow]}>
-                    <Text style={styles.bookingTotalLabel}>Total Amount</Text>
-                    <Text style={styles.bookingTotalValue}>{formatMoney(booking.totalAmount)}</Text>
-                  </View>
-                </View>
-
-                {(booking.specialRequests || (booking.itineraryNotes && booking.itineraryNotes.length > 0)) && (
-                  <View style={styles.bookingSection}>
-                    <Text style={styles.bookingSectionTitle}>Notes</Text>
-                    {booking.specialRequests ? (
-                      <Text style={styles.bookingNotesText}>{booking.specialRequests}</Text>
-                    ) : null}
-                    {booking.itineraryNotes?.filter(Boolean).map((note, index) => (
-                      <Text key={`${booking._id}-note-${index}`} style={styles.bookingNotesText}>
-                        - {note}
-                      </Text>
-                    ))}
-                  </View>
-                )}
 
                 <TouchableOpacity
-                  style={styles.viewReceiptButton}
-                  onPress={() => router.push({ pathname: '/receipt', params: { bookingId: booking._id } })}
+                  style={[styles.saveButton, isSaving && styles.buttonDisabled]}
+                  onPress={handleSaveProfile}
+                  disabled={isSaving}
                 >
-                  <Ionicons name="receipt-outline" size={18} color="#fff" />
-                  <Text style={styles.viewReceiptButtonText}>View Receipt</Text>
+                  <Text style={styles.saveButtonText}>{isSaving ? 'Saving...' : 'Save Changes'}</Text>
                 </TouchableOpacity>
-              </View>
-            ))
-          )}
-          <View style={{ height: 30 }} />
-        </View>
-      )}
-      {user && activeTab === 'reviews' && (
-        <View style={styles.reviewsContainer}>
-          <TouchableOpacity
-            style={styles.writeReviewButton}
-            onPress={() => setShowReviewModal(true)}
-          >
-            <Ionicons name="pencil" size={20} color="#fff" />
-            <Text style={styles.writeReviewText}>Write a Review</Text>
-          </TouchableOpacity>
 
-          {loadingReviews ? (
-            <ActivityIndicator size="large" color="#007AFF" style={{ marginTop: 20 }} />
-          ) : myReviews.length === 0 ? (
-            <View style={styles.emptyReviews}>
-              <Ionicons name="chatbubble-ellipses-outline" size={50} color="#ccc" />
-              <Text style={styles.emptyReviewsText}>You haven&apos;t written any reviews yet.</Text>
-            </View>
-          ) : (
-            myReviews.map((review) => (
-              <View key={review._id} style={styles.reviewCard}>
-                <View style={styles.reviewHeader}>
-                  <View>
-                    <Text style={styles.reviewType}>
-                      {review.feedbackType === 'hotel' ? '🏨 Hotel' :
-                        review.feedbackType === 'tourpack' ? '🧳 Tour Package' :
-                          review.feedbackType === 'transportation' ? '🚗 Transportation' : '⭐ General App'}
+                {/* Password Reset Section Toggle */}
+                <TouchableOpacity 
+                  style={styles.passwordToggle} 
+                  onPress={() => setShowPasswordSection(!showPasswordSection)}
+                >
+                  <Text style={styles.passwordToggleText}>
+                    {showPasswordSection ? 'Cancel Password Change' : 'Change Password'}
+                  </Text>
+                </TouchableOpacity>
+
+                {showPasswordSection && (
+                  <View style={styles.passwordSection}>
+                    <Text style={styles.passwordSectionTitle}>Update Password</Text>
+                    
+                    <Text style={styles.requirementHint}>
+                      Password must be at least 8 characters long and include an uppercase letter, lowercase letter, number, and special character.
                     </Text>
-                    {review.targetId?.name && <Text style={styles.reviewTarget}>{review.targetId.name}</Text>}
-                    {review.targetId?.title && <Text style={styles.reviewTarget}>{review.targetId.title}</Text>}
+
+                    {passwordError ? (
+                      <View style={styles.inlineErrorContainer}>
+                        <Text style={styles.inlineErrorText}>{passwordError}</Text>
+                      </View>
+                    ) : null}
+
+                    <View style={styles.formGroup}>
+                      <Text style={styles.label}>Current Password</Text>
+                      <TextInput
+                        style={styles.input}
+                        placeholder="Enter current password"
+                        value={currentPassword}
+                        onChangeText={setCurrentPassword}
+                        secureTextEntry
+                        placeholderTextColor="#999"
+                      />
+                    </View>
+
+                    <View style={styles.formGroup}>
+                      <Text style={styles.label}>New Password</Text>
+                      <TextInput
+                        style={styles.input}
+                        placeholder="Min. 8 characters"
+                        value={newPassword}
+                        onChangeText={setNewPassword}
+                        secureTextEntry
+                        placeholderTextColor="#999"
+                      />
+                    </View>
+
+                    <View style={styles.formGroup}>
+                      <Text style={styles.label}>Confirm New Password</Text>
+                      <TextInput
+                        style={styles.input}
+                        placeholder="Re-type new password"
+                        value={confirmPassword}
+                        onChangeText={setConfirmPassword}
+                        secureTextEntry
+                        placeholderTextColor="#999"
+                      />
+                    </View>
+
+                    <TouchableOpacity
+                      style={[styles.changePasswordButton, isChangingPassword && styles.buttonDisabled]}
+                      onPress={handleChangePassword}
+                      disabled={isChangingPassword}
+                    >
+                      <Text style={styles.changePasswordButtonText}>
+                        {isChangingPassword ? 'Updating...' : 'Update Password'}
+                      </Text>
+                    </TouchableOpacity>
                   </View>
-                  <View style={styles.reviewStatusContainer}>
-                    <Text style={[styles.reviewStatus, review.status === 'hidden' && styles.reviewStatusHidden]}>
-                      {review.status === 'published' ? 'Published' : 'Hidden by Admin'}
-                    </Text>
+                )}
+              </View>
+            ) : (
+              <>
+                <View style={styles.section}>
+                  <Text style={styles.sectionTitle}>Contact Information</Text>
+
+                  <View style={styles.detailItem}>
+                    <Text style={styles.detailLabel}>Email Address</Text>
+                    <Text style={styles.detailValue}>{user.email}</Text>
+                  </View>
+
+                  <View style={styles.detailItem}>
+                    <Text style={styles.detailLabel}>Phone Number</Text>
+                    <Text style={styles.detailValue}>{user.phoneNumber}</Text>
                   </View>
                 </View>
 
-                <View style={styles.starsRow}>
-                  {[1, 2, 3, 4, 5].map((star) => (
-                    <Ionicons
-                      key={star}
-                      name={star <= review.rating ? "star" : "star-outline"}
-                      size={16}
-                      color="#FFD700"
-                    />
+                {/* Account Section */}
+                <View style={styles.section}>
+                  <Text style={styles.sectionTitle}>Account Information</Text>
+
+                  <View style={styles.detailItem}>
+                    <Text style={styles.detailLabel}>Account Type</Text>
+                    <Text style={styles.detailValue}>{user.role}</Text>
+                  </View>
+
+                  <View style={styles.detailItem}>
+                    <Text style={styles.detailLabel}>Member Since</Text>
+                    <Text style={styles.detailValue}>{formatDate(user.createdAt)}</Text>
+                  </View>
+
+                  <View style={styles.detailItem}>
+                    <Text style={styles.detailLabel}>User ID</Text>
+                    <Text style={styles.detailValue}>{user._id}</Text>
+                  </View>
+                </View>
+              </>
+            )}
+
+            {/* Action Buttons */}
+            {!isEditing && (
+              <View style={styles.buttonContainer}>
+                <TouchableOpacity 
+                  activeOpacity={0.7}
+                  style={styles.logoutButton} 
+                  onPress={() => {
+                    console.log('Logout button pressed');
+                    handleLogout();
+                  }}
+                >
+                  <Text style={styles.logoutButtonText}>Logout</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+
+            <View style={{ height: 30 }} />
+          </View>
+        )}
+        {user && activeTab === 'bookings' && (
+          <View style={styles.bookingsContainer}>
+            <View style={styles.bookingsHeaderRow}>
+              <View>
+                <Text style={styles.bookingsTitle}>My Reservations</Text>
+                <Text style={styles.bookingsSubtitle}>All your booking details in one place.</Text>
+              </View>
+              <TouchableOpacity style={styles.refreshBookingsButton} onPress={fetchMyBookings}>
+                <Ionicons name="refresh" size={18} color="#007AFF" />
+              </TouchableOpacity>
+            </View>
+
+            {loadingBookingsList ? (
+              <ActivityIndicator size="large" color="#007AFF" style={styles.bookingsLoader} />
+            ) : myBookings.length === 0 ? (
+              <View style={styles.emptyBookingsCard}>
+                <Ionicons name="calendar-clear-outline" size={52} color="#cbd5e1" />
+                <Text style={styles.emptyBookingsTitle}>No bookings yet</Text>
+                <Text style={styles.emptyBookingsMessage}>
+                  Your hotel stays, packages, and transportation bookings will appear here.
+                </Text>
+              </View>
+            ) : (
+              myBookings.map((booking) => (
+                <View key={booking._id} style={styles.bookingDetailsCard}>
+                  <View style={styles.bookingTopRow}>
+                    <View style={styles.bookingTopLeft}>
+                      <Text style={styles.bookingReference}>{booking.bookingReference}</Text>
+                      <Text style={styles.bookingCreatedDate}>Booked on {formatDate(booking.createdAt)}</Text>
+                    </View>
+                    <View style={styles.bookingBadgeColumn}>
+                      <View style={[styles.statusPill, { backgroundColor: `${getBookingStatusColor(booking.bookingStatus)}18` }]}>
+                        <Text style={[styles.statusPillText, { color: getBookingStatusColor(booking.bookingStatus) }]}>
+                          {booking.bookingStatus.toUpperCase()}
+                        </Text>
+                      </View>
+                      <View style={[styles.statusPill, { backgroundColor: `${getPaymentStatusColor(booking.paymentStatus)}18` }]}>
+                        <Text style={[styles.statusPillText, { color: getPaymentStatusColor(booking.paymentStatus) }]}>
+                          {booking.paymentStatus.replace('_', ' ').toUpperCase()}
+                        </Text>
+                      </View>
+                    </View>
+                  </View>
+
+                  <View style={styles.bookingSection}>
+                    <Text style={styles.bookingSectionTitle}>Trip Details</Text>
+                    <View style={styles.bookingInfoRow}>
+                      <Text style={styles.bookingInfoLabel}>Destination</Text>
+                      <Text style={styles.bookingInfoValue}>{booking.destination || booking.tourPack?.destination || 'N/A'}</Text>
+                    </View>
+                    <View style={styles.bookingInfoRow}>
+                      <Text style={styles.bookingInfoLabel}>Guest</Text>
+                      <Text style={styles.bookingInfoValue}>{booking.guestName}</Text>
+                    </View>
+                    <View style={styles.bookingInfoRow}>
+                      <Text style={styles.bookingInfoLabel}>Contact</Text>
+                      <Text style={styles.bookingInfoValue}>{booking.email} | {booking.phone}</Text>
+                    </View>
+                    <View style={styles.bookingInfoRow}>
+                      <Text style={styles.bookingInfoLabel}>Party Size</Text>
+                      <Text style={styles.bookingInfoValue}>
+                        {booking.adults} adult(s), {booking.children} child(ren), {booking.guests} guest(s)
+                      </Text>
+                    </View>
+                    <View style={styles.bookingInfoRow}>
+                      <Text style={styles.bookingInfoLabel}>Travel Style</Text>
+                      <Text style={styles.bookingInfoValue}>{booking.travelStyle || 'N/A'}</Text>
+                    </View>
+                  </View>
+
+                  {(booking.hotel || booking.tourPack || booking.transportation) && (
+                    <View style={styles.bookingSection}>
+                      <Text style={styles.bookingSectionTitle}>Reservation Items</Text>
+                      {booking.hotel && (
+                        <>
+                          <View style={styles.bookingInfoRow}>
+                            <Text style={styles.bookingInfoLabel}>Hotel</Text>
+                            <Text style={styles.bookingInfoValue}>{booking.hotel.name || 'N/A'}</Text>
+                          </View>
+                          <View style={styles.bookingInfoRow}>
+                            <Text style={styles.bookingInfoLabel}>Location</Text>
+                            <Text style={styles.bookingInfoValue}>{booking.hotel.location || 'N/A'}</Text>
+                          </View>
+                        </>
+                      )}
+                      {booking.tourPack && (
+                        <>
+                          <View style={styles.bookingInfoRow}>
+                            <Text style={styles.bookingInfoLabel}>Package</Text>
+                            <Text style={styles.bookingInfoValue}>{booking.tourPack.name || 'N/A'}</Text>
+                          </View>
+                          <View style={styles.bookingInfoRow}>
+                            <Text style={styles.bookingInfoLabel}>Duration</Text>
+                            <Text style={styles.bookingInfoValue}>{booking.tourPack.duration || 'N/A'}</Text>
+                          </View>
+                        </>
+                      )}
+                      {booking.transportation && (
+                        <>
+                          <View style={styles.bookingInfoRow}>
+                            <Text style={styles.bookingInfoLabel}>Transport</Text>
+                            <Text style={styles.bookingInfoValue}>
+                              {[booking.transportation.vehicleType, booking.transportation.brandModel].filter(Boolean).join(' - ') || 'N/A'}
+                            </Text>
+                          </View>
+                          <View style={styles.bookingInfoRow}>
+                            <Text style={styles.bookingInfoLabel}>Plate Number</Text>
+                            <Text style={styles.bookingInfoValue}>{booking.transportation.plateNumber || 'N/A'}</Text>
+                          </View>
+                        </>
+                      )}
+                    </View>
+                  )}
+
+                  <View style={styles.bookingSection}>
+                    <Text style={styles.bookingSectionTitle}>Schedule & Amounts</Text>
+                    {booking.checkInDate ? (
+                      <View style={styles.bookingInfoRow}>
+                        <Text style={styles.bookingInfoLabel}>Check-in</Text>
+                        <Text style={styles.bookingInfoValue}>{formatDate(booking.checkInDate)}</Text>
+                      </View>
+                    ) : null}
+                    {booking.checkOutDate ? (
+                      <View style={styles.bookingInfoRow}>
+                        <Text style={styles.bookingInfoLabel}>Check-out</Text>
+                        <Text style={styles.bookingInfoValue}>{formatDate(booking.checkOutDate)}</Text>
+                      </View>
+                    ) : null}
+                    <View style={styles.bookingInfoRow}>
+                      <Text style={styles.bookingInfoLabel}>Rooms / Nights</Text>
+                      <Text style={styles.bookingInfoValue}>{booking.rooms} room(s) / {booking.nights} night(s)</Text>
+                    </View>
+                    {booking.stayAmount > 0 && (
+                      <View style={styles.bookingInfoRow}>
+                        <Text style={styles.bookingInfoLabel}>Stay Amount</Text>
+                        <Text style={styles.bookingInfoValue}>{formatMoney(booking.stayAmount)}</Text>
+                      </View>
+                    )}
+                    {booking.packageAmount > 0 && (
+                      <View style={styles.bookingInfoRow}>
+                        <Text style={styles.bookingInfoLabel}>Package Amount</Text>
+                        <Text style={styles.bookingInfoValue}>{formatMoney(booking.packageAmount)}</Text>
+                      </View>
+                    )}
+                    {booking.transportationAmount > 0 && (
+                      <View style={styles.bookingInfoRow}>
+                        <Text style={styles.bookingInfoLabel}>Transportation</Text>
+                        <Text style={styles.bookingInfoValue}>{formatMoney(booking.transportationAmount)}</Text>
+                      </View>
+                    )}
+                    <View style={styles.bookingInfoRow}>
+                      <Text style={styles.bookingInfoLabel}>Service Fee</Text>
+                      <Text style={styles.bookingInfoValue}>{formatMoney(booking.serviceFee)}</Text>
+                    </View>
+                    <View style={[styles.bookingInfoRow, styles.bookingTotalRow]}>
+                      <Text style={styles.bookingTotalLabel}>Total Amount</Text>
+                      <Text style={styles.bookingTotalValue}>{formatMoney(booking.totalAmount)}</Text>
+                    </View>
+                  </View>
+
+                  {(booking.specialRequests || (booking.itineraryNotes && booking.itineraryNotes.length > 0)) && (
+                    <View style={styles.bookingSection}>
+                      <Text style={styles.bookingSectionTitle}>Notes</Text>
+                      {booking.specialRequests ? (
+                        <Text style={styles.bookingNotesText}>{booking.specialRequests}</Text>
+                      ) : null}
+                      {booking.itineraryNotes?.filter(Boolean).map((note, index) => (
+                        <Text key={`${booking._id}-note-${index}`} style={styles.bookingNotesText}>
+                          - {note}
+                        </Text>
+                      ))}
+                    </View>
+                  )}
+
+                  <TouchableOpacity
+                    style={styles.viewReceiptButton}
+                    onPress={() => router.push({ pathname: '/receipt', params: { bookingId: booking._id } })}
+                  >
+                    <Ionicons name="receipt-outline" size={18} color="#fff" />
+                    <Text style={styles.viewReceiptButtonText}>View Receipt</Text>
+                  </TouchableOpacity>
+                </View>
+              ))
+            )}
+            <View style={{ height: 30 }} />
+          </View>
+        )}
+        {user && activeTab === 'reviews' && (
+          <View style={styles.reviewsContainer}>
+            <TouchableOpacity 
+              style={styles.writeReviewButton}
+              onPress={() => setShowReviewModal(true)}
+            >
+              <Ionicons name="pencil" size={20} color="#fff" />
+              <Text style={styles.writeReviewText}>Write a Review</Text>
+            </TouchableOpacity>
+
+            {loadingReviews ? (
+              <ActivityIndicator size="large" color="#007AFF" style={{ marginTop: 20 }} />
+            ) : myReviews.length === 0 ? (
+              <View style={styles.emptyReviews}>
+                <Ionicons name="chatbubble-ellipses-outline" size={50} color="#ccc" />
+                <Text style={styles.emptyReviewsText}>You haven&apos;t written any reviews yet.</Text>
+              </View>
+            ) : (
+              myReviews.map((review) => (
+                <View key={review._id} style={styles.reviewCard}>
+                  <View style={styles.reviewHeader}>
+                    <View>
+                      <Text style={styles.reviewType}>
+                        {review.feedbackType === 'hotel' ? '🏨 Hotel' :
+                         review.feedbackType === 'tourpack' ? '🧳 Tour Package' :
+                         review.feedbackType === 'transportation' ? '🚗 Transportation' : '⭐ General App'}
+                      </Text>
+                      {review.targetId?.name && <Text style={styles.reviewTarget}>{review.targetId.name}</Text>}
+                      {review.targetId?.title && <Text style={styles.reviewTarget}>{review.targetId.title}</Text>}
+                    </View>
+                    <View style={styles.reviewStatusContainer}>
+                      <Text style={[styles.reviewStatus, review.status === 'hidden' && styles.reviewStatusHidden]}>
+                        {review.status === 'published' ? 'Published' : 'Hidden by Admin'}
+                      </Text>
+                    </View>
+                  </View>
+                  
+                  <View style={styles.starsRow}>
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <Ionicons 
+                        key={star} 
+                        name={star <= review.rating ? "star" : "star-outline"} 
+                        size={16} 
+                        color="#FFD700" 
+                      />
+                    ))}
+                  </View>
+
+                  <Text style={styles.reviewComment}>{review.comment}</Text>
+                  
+                  <View style={styles.reviewFooter}>
+                    <Text style={styles.reviewDate}>{new Date(review.createdAt).toLocaleDateString()}</Text>
+                    <TouchableOpacity onPress={() => handleDeleteReview(review._id)}>
+                      <Ionicons name="trash-outline" size={20} color="#ff4444" />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              ))
+            )}
+            <View style={{ height: 30 }} />
+          </View>
+        )}
+
+        {/* Write Review Modal */}
+        <Modal visible={showReviewModal} animationType="slide" transparent={true}>
+          <SafeAreaView style={styles.modalSafeArea}>
+            <View style={styles.modalContent}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Write a Review</Text>
+                <TouchableOpacity onPress={() => setShowReviewModal(false)}>
+                  <Ionicons name="close" size={28} color="#333" />
+                </TouchableOpacity>
+              </View>
+
+              <ScrollView style={styles.modalBody}>
+                <Text style={styles.label}>What are you reviewing?</Text>
+                <View style={styles.typeSelector}>
+                  {(['hotel', 'tourpack', 'transportation', 'general'] as const).map(type => (
+                    <TouchableOpacity 
+                      key={type}
+                      style={[styles.typeButton, reviewType === type && styles.typeButtonActive]}
+                      onPress={() => setReviewType(type)}
+                    >
+                      <Text style={[styles.typeButtonText, reviewType === type && styles.typeButtonTextActive]}>
+                        {type.charAt(0).toUpperCase() + type.slice(1)}
+                      </Text>
+                    </TouchableOpacity>
                   ))}
                 </View>
 
-                <Text style={styles.reviewComment}>{review.comment}</Text>
+                {reviewType !== 'general' && (
+                  <View style={styles.formGroup}>
+                    <Text style={styles.label}>Select Booking</Text>
+                    {loadingBookings ? (
+                      <ActivityIndicator color="#007AFF" />
+                    ) : availableBookings.length === 0 ? (
+                      <Text style={styles.noBookingsText}>No available completed/confirmed bookings to review.</Text>
+                    ) : (
+                      <View style={styles.pickerContainer}>
+                        {availableBookings.map(b => (
+                          <TouchableOpacity 
+                            key={b._id}
+                            style={[styles.bookingOption, selectedBooking === b._id && styles.bookingOptionActive]}
+                            onPress={() => setSelectedBooking(b._id)}
+                          >
+                            <Text style={styles.bookingOptionText}>
+                              {b.hotel?.name || b.tourPack?.name || b.transportation?.brandModel || b.transportation?.vehicleType || b.bookingReference}
+                            </Text>
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+                    )}
+                  </View>
+                )}
 
-                <View style={styles.reviewFooter}>
-                  <Text style={styles.reviewDate}>{new Date(review.createdAt).toLocaleDateString()}</Text>
-                  <TouchableOpacity onPress={() => handleDeleteReview(review._id)}>
-                    <Ionicons name="trash-outline" size={20} color="#ff4444" />
-                  </TouchableOpacity>
-                </View>
-              </View>
-            ))
-          )}
-          <View style={{ height: 30 }} />
-        </View>
-      )}
+                {(reviewType === 'general' || availableBookings.length > 0) && (
+                  <>
+                    <View style={styles.formGroup}>
+                      <Text style={styles.label}>Rating</Text>
+                      <View style={styles.starsSelector}>
+                        {[1, 2, 3, 4, 5].map((star) => (
+                          <TouchableOpacity key={star} onPress={() => setRating(star)}>
+                            <Ionicons 
+                              name={star <= rating ? "star" : "star-outline"} 
+                              size={32} 
+                              color="#FFD700" 
+                            />
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+                    </View>
 
-      {/* Write Review Modal */}
-      <Modal visible={showReviewModal} animationType="slide" transparent={true}>
-        <SafeAreaView style={styles.modalSafeArea}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Write a Review</Text>
-              <TouchableOpacity onPress={() => setShowReviewModal(false)}>
-                <Ionicons name="close" size={28} color="#333" />
-              </TouchableOpacity>
+                    <View style={styles.formGroup}>
+                      <Text style={styles.label}>Comment</Text>
+                      <TextInput
+                        style={[styles.input, styles.textArea]}
+                        placeholder="Share your experience..."
+                        value={comment}
+                        onChangeText={setComment}
+                        multiline
+                        numberOfLines={4}
+                        textAlignVertical="top"
+                      />
+                    </View>
+
+                    <TouchableOpacity 
+                      style={[styles.submitReviewButton, submittingReview && styles.buttonDisabled]}
+                      onPress={handleSubmitReview}
+                      disabled={submittingReview}
+                    >
+                      <Text style={styles.submitReviewButtonText}>
+                        {submittingReview ? 'Submitting...' : 'Submit Review'}
+                      </Text>
+                    </TouchableOpacity>
+                  </>
+                )}
+                <View style={{ height: 40 }} />
+              </ScrollView>
             </View>
-
-            <ScrollView style={styles.modalBody}>
-              <Text style={styles.label}>What are you reviewing?</Text>
-              <View style={styles.typeSelector}>
-                {(['hotel', 'tourpack', 'transportation', 'general'] as const).map(type => (
-                  <TouchableOpacity
-                    key={type}
-                    style={[styles.typeButton, reviewType === type && styles.typeButtonActive]}
-                    onPress={() => setReviewType(type)}
-                  >
-                    <Text style={[styles.typeButtonText, reviewType === type && styles.typeButtonTextActive]}>
-                      {type.charAt(0).toUpperCase() + type.slice(1)}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-
-              {reviewType !== 'general' && (
-                <View style={styles.formGroup}>
-                  <Text style={styles.label}>Select Booking</Text>
-                  {loadingBookings ? (
-                    <ActivityIndicator color="#007AFF" />
-                  ) : availableBookings.length === 0 ? (
-                    <Text style={styles.noBookingsText}>No available completed/confirmed bookings to review.</Text>
-                  ) : (
-                    <View style={styles.pickerContainer}>
-                      {availableBookings.map(b => (
-                        <TouchableOpacity
-                          key={b._id}
-                          style={[styles.bookingOption, selectedBooking === b._id && styles.bookingOptionActive]}
-                          onPress={() => setSelectedBooking(b._id)}
-                        >
-                          <Text style={styles.bookingOptionText}>
-                            {b.hotel?.name || b.tourPack?.name || b.transportation?.brandModel || b.transportation?.vehicleType || b.bookingReference}
-                          </Text>
-                        </TouchableOpacity>
-                      ))}
-                    </View>
-                  )}
-                </View>
-              )}
-
-              {(reviewType === 'general' || availableBookings.length > 0) && (
-                <>
-                  <View style={styles.formGroup}>
-                    <Text style={styles.label}>Rating</Text>
-                    <View style={styles.starsSelector}>
-                      {[1, 2, 3, 4, 5].map((star) => (
-                        <TouchableOpacity key={star} onPress={() => setRating(star)}>
-                          <Ionicons
-                            name={star <= rating ? "star" : "star-outline"}
-                            size={32}
-                            color="#FFD700"
-                          />
-                        </TouchableOpacity>
-                      ))}
-                    </View>
-                  </View>
-
-                  <View style={styles.formGroup}>
-                    <Text style={styles.label}>Comment</Text>
-                    <TextInput
-                      style={[styles.input, styles.textArea]}
-                      placeholder="Share your experience..."
-                      value={comment}
-                      onChangeText={setComment}
-                      multiline
-                      numberOfLines={4}
-                      textAlignVertical="top"
-                    />
-                  </View>
-
-                  <TouchableOpacity
-                    style={[styles.submitReviewButton, submittingReview && styles.buttonDisabled]}
-                    onPress={handleSubmitReview}
-                    disabled={submittingReview}
-                  >
-                    <Text style={styles.submitReviewButtonText}>
-                      {submittingReview ? 'Submitting...' : 'Submit Review'}
-                    </Text>
-                  </TouchableOpacity>
-                </>
-              )}
-              <View style={{ height: 40 }} />
-            </ScrollView>
-          </View>
-        </SafeAreaView>
-      </Modal>
-    </ScrollView>
-    </SafeAreaView >
+          </SafeAreaView>
+        </Modal>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
@@ -1634,7 +1634,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '700',
   },
-
+  
   // Reviews Styles
   reviewsContainer: {
     padding: 16,
@@ -1731,7 +1731,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#999',
   },
-
+  
   // Modal Styles
   modalSafeArea: {
     flex: 1,
