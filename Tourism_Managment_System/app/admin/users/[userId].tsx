@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
-  Image,
   Platform,
   SafeAreaView,
   ScrollView,
@@ -12,9 +11,11 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { API_BASE } from '../../../src/config';
+import { resolveImageUrl } from '../../../src/utils';
 import { getAuthHeaders, getAuthRole } from '../../../src/auth';
 
 interface UserProfile {
@@ -293,7 +294,12 @@ export default function UserDetailsScreen() {
         <View style={styles.profileCard}>
           <View style={styles.avatarWrapper}>
             {user.profilePhoto ? (
-              <Image source={{ uri: `${API_BASE}${user.profilePhoto}` }} style={styles.profileImage} />
+              <Image 
+                source={{ uri: resolveImageUrl(user.profilePhoto) ?? undefined }} 
+                style={styles.profileImage}
+                contentFit="cover"
+                transition={300}
+              />
             ) : (
               <View style={styles.avatarPlaceholder}>
                 <Text style={styles.avatarText}>{getInitials(user.name)}</Text>

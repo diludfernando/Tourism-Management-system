@@ -385,15 +385,24 @@ export default function UserProfileScreen() {
       formData.append('phoneNumber', editedPhone.trim());
 
       if (selectedPhoto) {
-        const uri = selectedPhoto;
-        const filename = uri.split('/').pop() || 'photo.jpg';
-        const match = /\.(\w+)$/.exec(filename);
-        const type = match ? `image/${match[1].toLowerCase()}` : 'image/jpeg';
-
-        // Convert URI to blob for proper file upload in React Native
-        const response_blob = await fetch(uri);
-        const blob = await response_blob.blob();
-        formData.append('profilePhoto', blob, filename);
+        if (Platform.OS === 'web') {
+          // Web approach: use blob
+          const response_blob = await fetch(selectedPhoto);
+          const blob = await response_blob.blob();
+          formData.append('profilePhoto', blob, 'profile.jpg');
+        } else {
+          // Native approach: use object with uri, name, and type
+          const uri = selectedPhoto;
+          const filename = uri.split('/').pop() || 'profile.jpg';
+          const match = /\.(\w+)$/.exec(filename);
+          const type = match ? `image/${match[1].toLowerCase()}` : 'image/jpeg';
+          
+          formData.append('profilePhoto', {
+            uri,
+            name: filename,
+            type,
+          } as any);
+        }
       }
 
       const response = await fetch(`${API_BASE}/api/users/me`, {

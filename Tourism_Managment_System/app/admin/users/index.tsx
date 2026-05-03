@@ -17,6 +17,7 @@ import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { API_BASE } from '../../../src/config';
+import { resolveImageUrl } from '../../../src/utils';
 import { getAuthHeaders, getAuthRole } from '../../../src/auth';
 
 type UserItem = {
@@ -325,7 +326,7 @@ export default function AdminUsersScreen() {
                 <View style={styles.avatar}>
                   {user.profilePhoto ? (
                     <Image 
-                      source={{ uri: `${API_BASE}${user.profilePhoto}` }} 
+                      source={{ uri: resolveImageUrl(user.profilePhoto) ?? undefined }} 
                       style={styles.avatarImage}
                       contentFit="cover"
                       transition={300}
