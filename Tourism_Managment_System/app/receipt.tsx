@@ -46,6 +46,7 @@ type Booking = {
   transportationAmount: number;
   serviceFee: number;
   totalAmount: number;
+  bookingStatus: 'pending' | 'confirmed' | 'completed' | 'cancelled';
   paymentStatus: string;
   createdAt: string;
 };
@@ -64,6 +65,33 @@ const formatDateForDisplay = (value?: string) => {
     day: 'numeric',
     year: 'numeric',
   });
+};
+
+const getReceiptState = (status: Booking['bookingStatus']) => {
+  if (status === 'confirmed' || status === 'completed') {
+    return {
+      icon: 'checkmark-circle' as const,
+      iconColor: '#047857',
+      title: 'Confirmed',
+      subtitle: 'Your reservation is secured.',
+    };
+  }
+
+  if (status === 'cancelled') {
+    return {
+      icon: 'close-circle' as const,
+      iconColor: '#B91C1C',
+      title: 'Cancelled',
+      subtitle: 'This reservation is no longer active.',
+    };
+  }
+
+  return {
+    icon: 'time' as const,
+    iconColor: '#B45309',
+    title: 'Pending Confirmation',
+    subtitle: 'Your booking request was received and is awaiting approval.',
+  };
 };
 
 export default function ReceiptScreen() {
@@ -122,6 +150,8 @@ export default function ReceiptScreen() {
     );
   }
 
+  const receiptState = getReceiptState(booking.bookingStatus);
+
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar style="dark" />
@@ -135,10 +165,10 @@ export default function ReceiptScreen() {
         <View style={styles.receiptCard}>
           <View style={styles.receiptHeader}>
             <View style={styles.successBadge}>
-              <Ionicons name="checkmark-circle" size={48} color="#047857" />
+              <Ionicons name={receiptState.icon} size={48} color={receiptState.iconColor} />
             </View>
-            <Text style={styles.successTitle}>Confirmed!</Text>
-            <Text style={styles.successSubtitle}>Your reservation is now secured.</Text>
+            <Text style={styles.successTitle}>{receiptState.title}</Text>
+            <Text style={styles.successSubtitle}>{receiptState.subtitle}</Text>
           </View>
 
           <View style={styles.infoPanel}>
@@ -243,7 +273,7 @@ export default function ReceiptScreen() {
               
               <View style={styles.statusBadge}>
                 <Text style={styles.statusText}>
-                  Status: {booking.paymentStatus.toUpperCase()}
+                  Booking: {booking.bookingStatus.toUpperCase()} | Payment: {booking.paymentStatus.toUpperCase()}
                 </Text>
               </View>
             </View>

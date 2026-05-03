@@ -17,7 +17,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import { API_BASE } from '../src/config';
-import { getAuthToken, getAuthRole, clearAuthSession } from '../src/auth';
+import { getAuthHeaders, getAuthToken, getAuthRole, clearAuthSession } from '../src/auth';
 
 interface UserProfile {
   _id: string;
@@ -47,6 +47,47 @@ interface AvailableBooking {
   tourPack?: any;
   transportation?: any;
 }
+
+interface UserBooking {
+  _id: string;
+  bookingReference: string;
+  destination: string;
+  guestName: string;
+  email: string;
+  phone: string;
+  checkInDate?: string;
+  checkOutDate?: string;
+  adults: number;
+  children: number;
+  guests: number;
+  rooms: number;
+  nights: number;
+  stayAmount: number;
+  packageAmount: number;
+  transportationAmount: number;
+  serviceFee: number;
+  totalAmount: number;
+  bookingStatus: 'pending' | 'confirmed' | 'completed' | 'cancelled';
+  paymentStatus: 'deposit_due' | 'paid' | 'refunded';
+  travelStyle?: string;
+  specialRequests?: string;
+  itineraryNotes?: string[];
+  createdAt: string;
+  hotel?: {
+    name?: string;
+    location?: string;
+  };
+  tourPack?: {
+    name?: string;
+    destination?: string;
+    duration?: string;
+  };
+  transportation?: {
+    vehicleType?: string;
+    brandModel?: string;
+    plateNumber?: string;
+  };
+}
 export default function UserProfileScreen() {
   const router = useRouter();
   const [user, setUser] = useState<UserProfile | null>(null);
@@ -68,7 +109,9 @@ export default function UserProfileScreen() {
   const [passwordError, setPasswordError] = useState('');
 
   // Tabs and Reviews state
-  const [activeTab, setActiveTab] = useState<'profile' | 'reviews'>('profile');
+  const [activeTab, setActiveTab] = useState<'profile' | 'bookings' | 'reviews'>('profile');
+  const [myBookings, setMyBookings] = useState<UserBooking[]>([]);
+  const [loadingBookingsList, setLoadingBookingsList] = useState(false);
   const [myReviews, setMyReviews] = useState<Review[]>([]);
   const [loadingReviews, setLoadingReviews] = useState(false);
   
@@ -154,6 +197,30 @@ export default function UserProfileScreen() {
     }
   };
 
+  const fetchMyBookings = async () => {
+    try {
+      setLoadingBookingsList(true);
+      const headers = await getAuthHeaders();
+      const response = await fetch(`${API_BASE}/api/bookings/my-bookings`, { headers });
+      const data = await response.json();
+
+      if (response.ok) {
+        setMyBookings(Array.isArray(data) ? data : []);
+      } else {
+        console.error('Failed to fetch user bookings:', data?.message || response.status);
+      }
+    } catch (err) {
+      console.error('Failed to fetch user bookings:', err);
+    } finally {
+      setLoadingBookingsList(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'bookings') {
+      fetchMyBookings();
+    }
+  }, [activeTab]);
   useEffect(() => {
     if (activeTab === 'reviews') {
       fetchMyReviews();
@@ -220,6 +287,7 @@ export default function UserProfileScreen() {
         feedbackType: reviewType,
         rating,
         comment,
+        bookingId: reviewType !== 'general' ? selectedBooking : undefined,
         targetId: reviewType !== 'general' ? targetId : undefined,
       };
 
@@ -463,6 +531,35 @@ export default function UserProfileScreen() {
     });
   };
 
+  const formatMoney = (amount: number) =>
+    `LKR ${Number(amount || 0).toLocaleString('en-US', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })}`;
+
+  const getBookingStatusColor = (status: UserBooking['bookingStatus']) => {
+    switch (status) {
+      case 'confirmed':
+        return '#0f9d58';
+      case 'completed':
+        return '#2563eb';
+      case 'cancelled':
+        return '#dc2626';
+      default:
+        return '#f59e0b';
+    }
+  };
+
+  const getPaymentStatusColor = (status: UserBooking['paymentStatus']) => {
+    switch (status) {
+      case 'paid':
+        return '#0f9d58';
+      case 'refunded':
+        return '#7c3aed';
+      default:
+        return '#f59e0b';
+    }
+  };
   if (loading) {
     return (
       <SafeAreaView style={styles.safeArea}>
@@ -519,6 +616,11 @@ export default function UserProfileScreen() {
             <Text style={[styles.tabText, activeTab === 'profile' && styles.activeTabText]}>Profile</Text>
           </TouchableOpacity>
           <TouchableOpacity 
+            style={[styles.tab, activeTab === 'bookings' && styles.activeTab]}
+            onPress={() => setActiveTab('bookings')}
+          >
+            <Text style={[styles.tabText, activeTab === 'bookings' && styles.activeTabText]}>My Bookings</Text>
+          </TouchableOpacity>
             style={[styles.tab, activeTab === 'reviews' && styles.activeTab]}
             onPress={() => setActiveTab('reviews')}
           >
@@ -723,7 +825,193 @@ export default function UserProfileScreen() {
             <View style={{ height: 30 }} />
           </View>
         )}
+        {user && activeTab === 'bookings' && (
+          <View style={styles.bookingsContainer}>
+            <View style={styles.bookingsHeaderRow}>
+              <View>
+                <Text style={styles.bookingsTitle}>My Reservations</Text>
+                <Text style={styles.bookingsSubtitle}>All your booking details in one place.</Text>
+              </View>
+              <TouchableOpacity style={styles.refreshBookingsButton} onPress={fetchMyBookings}>
+                <Ionicons name="refresh" size={18} color="#007AFF" />
+              </TouchableOpacity>
+            </View>
 
+            {loadingBookingsList ? (
+              <ActivityIndicator size="large" color="#007AFF" style={styles.bookingsLoader} />
+            ) : myBookings.length === 0 ? (
+              <View style={styles.emptyBookingsCard}>
+                <Ionicons name="calendar-clear-outline" size={52} color="#cbd5e1" />
+                <Text style={styles.emptyBookingsTitle}>No bookings yet</Text>
+                <Text style={styles.emptyBookingsMessage}>
+                  Your hotel stays, packages, and transportation bookings will appear here.
+                </Text>
+              </View>
+            ) : (
+              myBookings.map((booking) => (
+                <View key={booking._id} style={styles.bookingDetailsCard}>
+                  <View style={styles.bookingTopRow}>
+                    <View style={styles.bookingTopLeft}>
+                      <Text style={styles.bookingReference}>{booking.bookingReference}</Text>
+                      <Text style={styles.bookingCreatedDate}>Booked on {formatDate(booking.createdAt)}</Text>
+                    </View>
+                    <View style={styles.bookingBadgeColumn}>
+                      <View style={[styles.statusPill, { backgroundColor: `${getBookingStatusColor(booking.bookingStatus)}18` }]}>
+                        <Text style={[styles.statusPillText, { color: getBookingStatusColor(booking.bookingStatus) }]}>
+                          {booking.bookingStatus.toUpperCase()}
+                        </Text>
+                      </View>
+                      <View style={[styles.statusPill, { backgroundColor: `${getPaymentStatusColor(booking.paymentStatus)}18` }]}>
+                        <Text style={[styles.statusPillText, { color: getPaymentStatusColor(booking.paymentStatus) }]}>
+                          {booking.paymentStatus.replace('_', ' ').toUpperCase()}
+                        </Text>
+                      </View>
+                    </View>
+                  </View>
+
+                  <View style={styles.bookingSection}>
+                    <Text style={styles.bookingSectionTitle}>Trip Details</Text>
+                    <View style={styles.bookingInfoRow}>
+                      <Text style={styles.bookingInfoLabel}>Destination</Text>
+                      <Text style={styles.bookingInfoValue}>{booking.destination || booking.tourPack?.destination || 'N/A'}</Text>
+                    </View>
+                    <View style={styles.bookingInfoRow}>
+                      <Text style={styles.bookingInfoLabel}>Guest</Text>
+                      <Text style={styles.bookingInfoValue}>{booking.guestName}</Text>
+                    </View>
+                    <View style={styles.bookingInfoRow}>
+                      <Text style={styles.bookingInfoLabel}>Contact</Text>
+                      <Text style={styles.bookingInfoValue}>{booking.email} | {booking.phone}</Text>
+                    </View>
+                    <View style={styles.bookingInfoRow}>
+                      <Text style={styles.bookingInfoLabel}>Party Size</Text>
+                      <Text style={styles.bookingInfoValue}>
+                        {booking.adults} adult(s), {booking.children} child(ren), {booking.guests} guest(s)
+                      </Text>
+                    </View>
+                    <View style={styles.bookingInfoRow}>
+                      <Text style={styles.bookingInfoLabel}>Travel Style</Text>
+                      <Text style={styles.bookingInfoValue}>{booking.travelStyle || 'N/A'}</Text>
+                    </View>
+                  </View>
+
+                  {(booking.hotel || booking.tourPack || booking.transportation) && (
+                    <View style={styles.bookingSection}>
+                      <Text style={styles.bookingSectionTitle}>Reservation Items</Text>
+                      {booking.hotel && (
+                        <>
+                          <View style={styles.bookingInfoRow}>
+                            <Text style={styles.bookingInfoLabel}>Hotel</Text>
+                            <Text style={styles.bookingInfoValue}>{booking.hotel.name || 'N/A'}</Text>
+                          </View>
+                          <View style={styles.bookingInfoRow}>
+                            <Text style={styles.bookingInfoLabel}>Location</Text>
+                            <Text style={styles.bookingInfoValue}>{booking.hotel.location || 'N/A'}</Text>
+                          </View>
+                        </>
+                      )}
+                      {booking.tourPack && (
+                        <>
+                          <View style={styles.bookingInfoRow}>
+                            <Text style={styles.bookingInfoLabel}>Package</Text>
+                            <Text style={styles.bookingInfoValue}>{booking.tourPack.name || 'N/A'}</Text>
+                          </View>
+                          <View style={styles.bookingInfoRow}>
+                            <Text style={styles.bookingInfoLabel}>Duration</Text>
+                            <Text style={styles.bookingInfoValue}>{booking.tourPack.duration || 'N/A'}</Text>
+                          </View>
+                        </>
+                      )}
+                      {booking.transportation && (
+                        <>
+                          <View style={styles.bookingInfoRow}>
+                            <Text style={styles.bookingInfoLabel}>Transport</Text>
+                            <Text style={styles.bookingInfoValue}>
+                              {[booking.transportation.vehicleType, booking.transportation.brandModel].filter(Boolean).join(' - ') || 'N/A'}
+                            </Text>
+                          </View>
+                          <View style={styles.bookingInfoRow}>
+                            <Text style={styles.bookingInfoLabel}>Plate Number</Text>
+                            <Text style={styles.bookingInfoValue}>{booking.transportation.plateNumber || 'N/A'}</Text>
+                          </View>
+                        </>
+                      )}
+                    </View>
+                  )}
+
+                  <View style={styles.bookingSection}>
+                    <Text style={styles.bookingSectionTitle}>Schedule & Amounts</Text>
+                    {booking.checkInDate ? (
+                      <View style={styles.bookingInfoRow}>
+                        <Text style={styles.bookingInfoLabel}>Check-in</Text>
+                        <Text style={styles.bookingInfoValue}>{formatDate(booking.checkInDate)}</Text>
+                      </View>
+                    ) : null}
+                    {booking.checkOutDate ? (
+                      <View style={styles.bookingInfoRow}>
+                        <Text style={styles.bookingInfoLabel}>Check-out</Text>
+                        <Text style={styles.bookingInfoValue}>{formatDate(booking.checkOutDate)}</Text>
+                      </View>
+                    ) : null}
+                    <View style={styles.bookingInfoRow}>
+                      <Text style={styles.bookingInfoLabel}>Rooms / Nights</Text>
+                      <Text style={styles.bookingInfoValue}>{booking.rooms} room(s) / {booking.nights} night(s)</Text>
+                    </View>
+                    {booking.stayAmount > 0 && (
+                      <View style={styles.bookingInfoRow}>
+                        <Text style={styles.bookingInfoLabel}>Stay Amount</Text>
+                        <Text style={styles.bookingInfoValue}>{formatMoney(booking.stayAmount)}</Text>
+                      </View>
+                    )}
+                    {booking.packageAmount > 0 && (
+                      <View style={styles.bookingInfoRow}>
+                        <Text style={styles.bookingInfoLabel}>Package Amount</Text>
+                        <Text style={styles.bookingInfoValue}>{formatMoney(booking.packageAmount)}</Text>
+                      </View>
+                    )}
+                    {booking.transportationAmount > 0 && (
+                      <View style={styles.bookingInfoRow}>
+                        <Text style={styles.bookingInfoLabel}>Transportation</Text>
+                        <Text style={styles.bookingInfoValue}>{formatMoney(booking.transportationAmount)}</Text>
+                      </View>
+                    )}
+                    <View style={styles.bookingInfoRow}>
+                      <Text style={styles.bookingInfoLabel}>Service Fee</Text>
+                      <Text style={styles.bookingInfoValue}>{formatMoney(booking.serviceFee)}</Text>
+                    </View>
+                    <View style={[styles.bookingInfoRow, styles.bookingTotalRow]}>
+                      <Text style={styles.bookingTotalLabel}>Total Amount</Text>
+                      <Text style={styles.bookingTotalValue}>{formatMoney(booking.totalAmount)}</Text>
+                    </View>
+                  </View>
+
+                  {(booking.specialRequests || (booking.itineraryNotes && booking.itineraryNotes.length > 0)) && (
+                    <View style={styles.bookingSection}>
+                      <Text style={styles.bookingSectionTitle}>Notes</Text>
+                      {booking.specialRequests ? (
+                        <Text style={styles.bookingNotesText}>{booking.specialRequests}</Text>
+                      ) : null}
+                      {booking.itineraryNotes?.filter(Boolean).map((note, index) => (
+                        <Text key={`${booking._id}-note-${index}`} style={styles.bookingNotesText}>
+                          - {note}
+                        </Text>
+                      ))}
+                    </View>
+                  )}
+
+                  <TouchableOpacity
+                    style={styles.viewReceiptButton}
+                    onPress={() => router.push({ pathname: '/receipt', params: { bookingId: booking._id } })}
+                  >
+                    <Ionicons name="receipt-outline" size={18} color="#fff" />
+                    <Text style={styles.viewReceiptButtonText}>View Receipt</Text>
+                  </TouchableOpacity>
+                </View>
+              ))
+            )}
+            <View style={{ height: 30 }} />
+          </View>
+        )}
         {user && activeTab === 'reviews' && (
           <View style={styles.reviewsContainer}>
             <TouchableOpacity 
@@ -739,7 +1027,7 @@ export default function UserProfileScreen() {
             ) : myReviews.length === 0 ? (
               <View style={styles.emptyReviews}>
                 <Ionicons name="chatbubble-ellipses-outline" size={50} color="#ccc" />
-                <Text style={styles.emptyReviewsText}>You haven't written any reviews yet.</Text>
+                <Text style={styles.emptyReviewsText}>You haven&apos;t written any reviews yet.</Text>
               </View>
             ) : (
               myReviews.map((review) => (
@@ -830,7 +1118,7 @@ export default function UserProfileScreen() {
                             onPress={() => setSelectedBooking(b._id)}
                           >
                             <Text style={styles.bookingOptionText}>
-                              {b.hotel?.name || b.tourPack?.title || b.transportation?.companyName || b.bookingReference}
+                              {b.hotel?.name || b.tourPack?.name || b.transportation?.brandModel || b.transportation?.vehicleType || b.bookingReference}
                             </Text>
                           </TouchableOpacity>
                         ))}
@@ -1180,6 +1468,171 @@ const styles = StyleSheet.create({
   },
   activeTabText: {
     color: '#fff',
+  },
+
+  bookingsContainer: {
+    padding: 16,
+  },
+  bookingsHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 20,
+    gap: 12,
+  },
+  bookingsTitle: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#1f2937',
+  },
+  bookingsSubtitle: {
+    marginTop: 4,
+    fontSize: 14,
+    color: '#6b7280',
+  },
+  refreshBookingsButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#eaf3ff',
+  },
+  bookingsLoader: {
+    marginTop: 32,
+  },
+  emptyBookingsCard: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    paddingVertical: 36,
+    paddingHorizontal: 24,
+    alignItems: 'center',
+  },
+  emptyBookingsTitle: {
+    marginTop: 14,
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#1f2937',
+  },
+  emptyBookingsMessage: {
+    marginTop: 8,
+    fontSize: 14,
+    lineHeight: 22,
+    color: '#6b7280',
+    textAlign: 'center',
+  },
+  bookingDetailsCard: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  bookingTopRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    gap: 12,
+  },
+  bookingTopLeft: {
+    flex: 1,
+  },
+  bookingReference: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#1f2937',
+  },
+  bookingCreatedDate: {
+    marginTop: 4,
+    fontSize: 13,
+    color: '#6b7280',
+  },
+  bookingBadgeColumn: {
+    alignItems: 'flex-end',
+    gap: 8,
+  },
+  statusPill: {
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  statusPillText: {
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  bookingSection: {
+    marginTop: 16,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#eef2f7',
+  },
+  bookingSectionTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#334155',
+    marginBottom: 10,
+  },
+  bookingInfoRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    gap: 16,
+    marginBottom: 8,
+  },
+  bookingInfoLabel: {
+    flex: 1,
+    fontSize: 14,
+    color: '#64748b',
+  },
+  bookingInfoValue: {
+    flex: 1,
+    fontSize: 14,
+    color: '#111827',
+    textAlign: 'right',
+  },
+  bookingTotalRow: {
+    marginTop: 6,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: '#eef2f7',
+  },
+  bookingTotalLabel: {
+    flex: 1,
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#111827',
+  },
+  bookingTotalValue: {
+    flex: 1,
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#007AFF',
+    textAlign: 'right',
+  },
+  bookingNotesText: {
+    fontSize: 14,
+    color: '#475569',
+    lineHeight: 22,
+    marginBottom: 6,
+  },
+  viewReceiptButton: {
+    marginTop: 18,
+    backgroundColor: '#007AFF',
+    borderRadius: 8,
+    paddingVertical: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  viewReceiptButtonText: {
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: '700',
   },
   
   // Reviews Styles

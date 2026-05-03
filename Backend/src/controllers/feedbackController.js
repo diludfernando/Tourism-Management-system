@@ -6,7 +6,7 @@ const Booking = require('../models/Booking');
 // @access  Private
 const submitFeedback = async (req, res) => {
   try {
-    const { feedbackType, targetId, rating, title, comment } = req.body;
+    const { feedbackType, targetId, bookingId: requestedBookingId, rating, title, comment } = req.body;
     const userId = req.user._id;
 
     if (!feedbackType || !rating || !comment) {
@@ -36,19 +36,24 @@ const submitFeedback = async (req, res) => {
         return res.status(400).json({ success: false, message: 'Invalid feedbackType' });
       }
 
-      // Verify the user has a confirmed/completed booking for this target
       const query = {
         user: userId,
         [targetField]: targetId,
         bookingStatus: { $in: ['confirmed', 'completed'] },
       };
 
+      if (requestedBookingId) {
+        query._id = requestedBookingId;
+      }
+
       const booking = await Booking.findOne(query);
 
       if (!booking) {
         return res.status(403).json({
           success: false,
-          message: `You must have a confirmed or completed booking for this ${feedbackType} to submit a review`,
+          message: requestedBookingId
+            ? `The selected booking is not eligible for this ${feedbackType} review`
+            : `You must have a confirmed or completed booking for this ${feedbackType} to submit a review`,
         });
       }
 
@@ -200,10 +205,10 @@ const getAvailableBookingsForReview = async (req, res) => {
       populateOptions = { path: 'hotel', select: 'name location' };
     } else if (type === 'tourpack') {
       targetField = 'tourPack';
-      populateOptions = { path: 'tourPack', select: 'title destination' };
+      populateOptions = { path: 'tourPack', select: 'name destination' };
     } else if (type === 'transportation') {
       targetField = 'transportation';
-      populateOptions = { path: 'transportation', select: 'vehicleType companyName' };
+      populateOptions = { path: 'transportation', select: 'vehicleType brandModel plateNumber' };
     }
 
     // Get all confirmed/completed bookings for this user & type
@@ -218,7 +223,7 @@ const getAvailableBookingsForReview = async (req, res) => {
       user: userId,
       feedbackType: type,
     });
-    const reviewedBookingIds = existingFeedbacks.map(f => f.bookingId.toString());
+    const reviewedBookingIds = existingFeedbacks.map(f => f.bookingId?.toString()).filter(id => id);
 
     // Filter out already reviewed bookings
     const availableBookings = bookings.filter(b => !reviewedBookingIds.includes(b._id.toString()));
