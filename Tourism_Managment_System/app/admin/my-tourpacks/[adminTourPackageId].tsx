@@ -1,9 +1,18 @@
+import { SafeAreaView } from 'react-native-safe-area-context';
 import React, { useState, useEffect } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView,
-  TouchableOpacity, ActivityIndicator, Dimensions, FlatList, Modal,
-  Alert, Platform, SafeAreaView
-} from 'react-native';
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  ActivityIndicator,
+  Dimensions,
+  FlatList,
+  Modal,
+  Alert,
+  Platform
+} from 'react-native';;
 import { Image } from 'expo-image';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
@@ -12,8 +21,6 @@ import { adminTourPacksEditRoute, adminTourPacksListRoute } from '../../../src/r
 import { API_BASE } from '../../../src/config';
 import { getAuthHeaders } from '../../../src/auth';
 import { resolveImageUrl } from '../../../src/utils';
-
-const { width } = Dimensions.get('window');
 
 type TourPack = {
   _id: string;

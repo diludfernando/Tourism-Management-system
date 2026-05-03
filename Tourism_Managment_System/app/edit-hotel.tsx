@@ -1,3 +1,4 @@
+import { SafeAreaView } from 'react-native-safe-area-context';
 import React, { useState, useEffect } from 'react';
 import {
   StyleSheet,
@@ -5,7 +6,6 @@ import {
   Text,
   TouchableOpacity,
   ScrollView,
-  SafeAreaView,
   TextInput,
   KeyboardAvoidingView,
   Platform,
@@ -13,8 +13,8 @@ import {
   ActivityIndicator,
   Modal,
   FlatList,
-  Dimensions
-} from 'react-native';
+  useWindowDimensions
+} from 'react-native';;
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
@@ -55,6 +55,7 @@ export default function EditHotelScreen() {
     amenities: '',
   });
   const [isAdminMode, setIsAdminMode] = useState(false);
+  const { height } = useWindowDimensions();
 
   useEffect(() => {
     const verifyRole = async () => {
@@ -214,7 +215,7 @@ export default function EditHotelScreen() {
       </View>
 
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={{ flex: 1 }}
       >
         <ScrollView contentContainerStyle={styles.scrollContent}>
@@ -377,7 +378,7 @@ export default function EditHotelScreen() {
           activeOpacity={1}
           onPress={() => setShowTypePicker(false)}
         >
-          <View style={styles.modalContent}>
+          <View style={[styles.modalContent, { maxHeight: height * 0.6 }]}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Select Type</Text>
               <TouchableOpacity onPress={() => setShowTypePicker(false)}>
@@ -557,7 +558,6 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 25,
     paddingHorizontal: 20,
     paddingBottom: 40,
-    maxHeight: Dimensions.get('window').height * 0.6,
   },
   modalHeader: {
     flexDirection: 'row',

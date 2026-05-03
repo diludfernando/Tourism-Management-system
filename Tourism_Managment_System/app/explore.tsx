@@ -1,17 +1,16 @@
 import React, { useMemo, useState } from 'react';
 import {
   ActivityIndicator,
-  Dimensions,
   FlatList,
   Platform,
-  SafeAreaView,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   View,
-  Alert,
-} from 'react-native';
+  Alert
+} from 'react-native';;
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
@@ -22,7 +21,6 @@ import { resolveImageUrl } from '../src/utils';
 import { getAuthToken, getAuthRole, getAuthHeaders } from '../src/auth';
 
 const API_URL = `${API_BASE}/api/tourpacks`;
-const { width } = Dimensions.get('window');
 
 type TourPack = {
   _id: string;
@@ -55,6 +53,7 @@ export default function Explore() {
   const [loading, setLoading] = useState(true);
   const [packages, setPackages] = useState<TourPack[]>([]);
   const [userProfile, setUserProfile] = useState<{ profilePhoto?: string } | null>(null);
+  const insets = useSafeAreaInsets();
 
   const fetchPackages = async () => {
     setLoading(true);
@@ -174,7 +173,7 @@ export default function Explore() {
     <View style={styles.container}>
       <StatusBar style="dark" />
 
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: Math.max(insets.top, 20) }]}>
         <View style={{ width: 40 }} />
         <Text style={styles.headerTitle}>Explore Packages</Text>
         <TouchableOpacity onPress={() => router.push('/profile')} style={styles.profileButton}>
@@ -272,7 +271,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingTop: 60,
     paddingHorizontal: 20,
     paddingBottom: 18,
     backgroundColor: '#FFF',

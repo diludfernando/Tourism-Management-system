@@ -1,9 +1,9 @@
+import { SafeAreaView } from 'react-native-safe-area-context';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
   Platform,
-  SafeAreaView,
   ScrollView,
   Switch,
   StyleSheet,
@@ -11,8 +11,8 @@ import {
   TextInput,
   TouchableOpacity,
   View,
-  Image as RNImage,
-} from 'react-native';
+  Image as RNImage
+} from 'react-native';;
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';

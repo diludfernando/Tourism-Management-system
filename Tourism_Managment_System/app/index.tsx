@@ -1,10 +1,8 @@
 import React from 'react';
-import { StyleSheet, View, TouchableOpacity, Text, Dimensions } from 'react-native';
+import { StyleSheet, View, TouchableOpacity, Text } from 'react-native';
 import { Image } from 'expo-image';
 import { StatusBar } from 'expo-status-bar';
 import { useRouter } from 'expo-router';
-
-const { width, height } = Dimensions.get('window');
 
 export default function Index() {
   const router = useRouter();

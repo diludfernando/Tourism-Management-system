@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, ScrollView,
   TouchableOpacity, ActivityIndicator, Dimensions, FlatList, Modal,
-  TextInput, Alert, Platform
+  TextInput, Alert, Platform, useWindowDimensions
 } from 'react-native';
 import { Image } from 'expo-image';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -11,8 +11,6 @@ import { StatusBar } from 'expo-status-bar';
 import { API_BASE } from '../../src/config';
 import { resolveImageUrl } from '../../src/utils';
 import { getAuthToken } from '../../src/auth';
-
-const { height, width } = Dimensions.get('window');
 
 type TourPack = {
   _id: string;
@@ -43,6 +41,7 @@ export default function TourPackDetailScreen() {
   const [isGalleryViewerVisible, setIsGalleryViewerVisible] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [persons, setPersons] = useState(1);
+  const { width, height } = useWindowDimensions();
 
 
 
@@ -97,7 +96,7 @@ export default function TourPackDetailScreen() {
       <ScrollView showsVerticalScrollIndicator={false}>
 
         {/* Hero Image */}
-        <View style={styles.heroContainer}>
+        <View style={[styles.heroContainer, { height: height * 0.45 }]}>
           <Image
             source={
               tourPack.image
@@ -214,7 +213,7 @@ export default function TourPackDetailScreen() {
                           setSelectedGalleryIndex(Math.max(0, Math.min(index, galleryCount - 1)));
                         }}
                         renderItem={({ item, index }) => (
-                          <View style={styles.carGallerySlide}>
+                          <View style={[styles.carGallerySlide, { width: width - 40 }]}>
                             <TouchableOpacity activeOpacity={0.95} onPress={() => setIsGalleryViewerVisible(true)}>
                               <Image
                                 source={{ uri: resolveImageUrl(item.url) ?? undefined }}
@@ -407,7 +406,7 @@ export default function TourPackDetailScreen() {
               setSelectedGalleryIndex(Math.max(0, Math.min(index, (tourPack.gallery?.length || 1) - 1)));
             }}
             renderItem={({ item }) => (
-              <View style={styles.viewerSlide}>
+              <View style={[styles.viewerSlide, { width }]}>
                 <Image source={{ uri: resolveImageUrl(item.url) ?? undefined }} style={styles.viewerImage} contentFit="contain" transition={250} />
               </View>
             )}
@@ -421,7 +420,7 @@ export default function TourPackDetailScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F5F7FA' },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 },
-  heroContainer: { height: height * 0.45, position: 'relative' },
+  heroContainer: { position: 'relative' },
   heroImage: { width: '100%', height: '100%' },
   heroOverlay: {
     ...StyleSheet.absoluteFillObject,
@@ -472,7 +471,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#E9EEF7',
   },
   gallerySlide: {
-    width: width - 40,
     height: 250,
     position: 'relative',
   },
@@ -597,7 +595,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#E9EEF7',
   },
   carGallerySlide: {
-    width: width - 40,
     height: 250,
     position: 'relative',
   },
@@ -679,7 +676,7 @@ const styles = StyleSheet.create({
   },
   viewerCloseText: { color: '#fff', fontWeight: '800', fontSize: 13 },
   viewerCounterText: { color: '#fff', fontWeight: '700', fontSize: 13 },
-  viewerSlide: { width, flex: 1, justifyContent: 'center', alignItems: 'center' },
+  viewerSlide: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   viewerImage: { width: '100%', height: '100%' },
   modalOverlay: {
     flex: 1,

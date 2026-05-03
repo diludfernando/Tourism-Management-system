@@ -7,11 +7,11 @@ import {
   ActivityIndicator,
   Alert,
   TouchableOpacity,
-  SafeAreaView,
-  TextInput,
   Image,
   Platform,
+  TextInput,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import { API_BASE } from '../../src/config';

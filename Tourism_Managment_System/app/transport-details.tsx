@@ -1,16 +1,17 @@
+import { SafeAreaView } from 'react-native-safe-area-context';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
   Dimensions,
   Platform,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
-} from 'react-native';
+  useWindowDimensions
+} from 'react-native';;
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
@@ -18,7 +19,6 @@ import { API_BASE } from '../src/config';
 import { StatusBar } from 'expo-status-bar';
 
 const API_URL = `${API_BASE}/api/transportation`;
-const { width } = Dimensions.get('window');
 
 interface Vehicle {
   _id: string;
@@ -46,6 +46,7 @@ export default function TransportDetailsScreen() {
     tourPackId?: string;
     persons?: string;
   }>();
+  const { width } = useWindowDimensions();
   
   const [vehicle, setVehicle] = useState<Vehicle | null>(null);
   const [loading, setLoading] = useState(true);
@@ -116,7 +117,7 @@ export default function TransportDetailsScreen() {
     <SafeAreaView style={styles.container}>
       <StatusBar style="light" />
       <ScrollView bounces={false} contentContainerStyle={styles.scrollContent}>
-        <View style={styles.hero}>
+        <View style={[styles.hero, { height: Math.min(width * 0.85, 400) }]}>
           {vehicle.vehicleImage ? (
             <Image source={{ uri: vehicle.vehicleImage }} style={styles.heroImage} contentFit="cover" />
           ) : (
@@ -257,7 +258,6 @@ const styles = StyleSheet.create({
   },
   hero: {
     position: 'relative',
-    height: Math.min(width * 0.85, 400),
     backgroundColor: '#003580',
   },
   heroImage: {

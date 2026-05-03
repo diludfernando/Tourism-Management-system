@@ -1,16 +1,17 @@
+import { SafeAreaView } from 'react-native-safe-area-context';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
   Dimensions,
   Platform,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
-} from 'react-native';
+  useWindowDimensions
+} from 'react-native';;
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
@@ -18,7 +19,6 @@ import { API_BASE } from '../src/config';
 import { resolveImageUrl } from '../src/utils';
 
 const API_URL = `${API_BASE}/api/hotels`;
-const { width } = Dimensions.get('window');
 
 type Hotel = {
   _id: string;
@@ -58,6 +58,7 @@ export default function HotelDetailsScreen() {
     admin?: string;
     persons?: string;
   }>();
+  const { width } = useWindowDimensions();
 
   console.log('[HotelDetails] Params:', { id, transportId, tourPackId, admin, persons });
 
@@ -160,7 +161,7 @@ export default function HotelDetailsScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView bounces={false} contentContainerStyle={styles.scrollContent}>
-        <View style={styles.hero}>
+        <View style={[styles.hero, { height: Math.min(width * 0.88, 440) }]}>
           {hotel.image ? (
             <Image source={{ uri: resolveImageUrl(hotel.image) ?? undefined }} style={styles.heroImage} contentFit="cover" />
           ) : (
@@ -366,7 +367,6 @@ const styles = StyleSheet.create({
   },
   hero: {
     position: 'relative',
-    height: Math.min(width * 0.88, 440),
     backgroundColor: '#0F172A',
   },
   heroImage: {

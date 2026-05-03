@@ -1,20 +1,20 @@
+import { SafeAreaView } from 'react-native-safe-area-context';
 import React, { useEffect, useState } from 'react';
-import { 
-  StyleSheet, 
-  View, 
-  Text, 
-  TouchableOpacity, 
-  ScrollView, 
-  SafeAreaView, 
-  TextInput, 
-  KeyboardAvoidingView, 
+import {
+  StyleSheet,
+  View,
+  Text,
+  TouchableOpacity,
+  ScrollView,
+  TextInput,
+  KeyboardAvoidingView,
   Platform,
   Alert,
   ActivityIndicator,
   Modal,
   FlatList,
-  Dimensions
-} from 'react-native';
+  useWindowDimensions
+} from 'react-native';;
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
@@ -51,6 +51,7 @@ export default function EditTransportationScreen() {
     contactNumber: '',
   });
   const isAdminMode = admin === 'true';
+  const { height } = useWindowDimensions();
 
   useEffect(() => {
     if (!isAdminMode) {
@@ -182,7 +183,7 @@ export default function EditTransportationScreen() {
       </View>
 
       <KeyboardAvoidingView 
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={{ flex: 1 }}
       >
         <ScrollView contentContainerStyle={styles.scrollContent}>
@@ -325,7 +326,7 @@ export default function EditTransportationScreen() {
           activeOpacity={1} 
           onPress={() => setShowVehicleTypePicker(false)}
         >
-          <View style={styles.modalContent}>
+          <View style={[styles.modalContent, { maxHeight: height * 0.6 }]}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Select Vehicle Type</Text>
               <TouchableOpacity onPress={() => setShowVehicleTypePicker(false)}>
@@ -505,7 +506,6 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 25,
     paddingHorizontal: 20,
     paddingBottom: 40,
-    maxHeight: Dimensions.get('window').height * 0.6,
   },
   modalHeader: {
     flexDirection: 'row',
