@@ -288,6 +288,7 @@ export default function UserProfileScreen() {
         feedbackType: reviewType,
         rating,
         comment,
+        bookingId: reviewType !== 'general' ? selectedBooking : undefined,
         targetId: reviewType !== 'general' ? targetId : undefined,
       };
 
@@ -1122,7 +1123,7 @@ export default function UserProfileScreen() {
                             onPress={() => setSelectedBooking(b._id)}
                           >
                             <Text style={styles.bookingOptionText}>
-                              {b.hotel?.name || b.tourPack?.title || b.transportation?.companyName || b.bookingReference}
+                              {b.hotel?.name || b.tourPack?.name || b.transportation?.brandModel || b.transportation?.vehicleType || b.bookingReference}
                             </Text>
                           </TouchableOpacity>
                         ))}

@@ -116,14 +116,21 @@ const createBooking = async (req, res) => {
     let stayAmount = 0;
     let packageAmount = 0;
     let transportationAmount = 0;
+    let nights = 0;
+    let hotel = null;
+    let tourPack = null;
+
+    if (!hotelId && !tourPackId) {
+      return res.status(400).json({ message: 'Either a hotel or a tour package must be selected' });
+    }
 
     if (hotelId) {
-      const hotel = await Hotel.findById(hotelId);
+      hotel = await Hotel.findById(hotelId);
       if (!hotel) {
         return res.status(404).json({ message: 'Selected hotel was not found' });
       }
 
-      const nights = calculateNights(checkInDate, checkOutDate);
+      nights = calculateNights(checkInDate, checkOutDate);
       if (nights < 1) {
         return res.status(400).json({ message: 'Check-out date must be after check-in date' });
       }
@@ -133,26 +140,21 @@ const createBooking = async (req, res) => {
       }
 
       stayAmount = hotel.pricePerNight * parsedRooms * nights;
-      
-      // Update hotel availability
-      hotel.availableRooms -= parsedRooms;
-      await hotel.save();
-    } else if (tourPackId) {
-      const tourPack = await TourPack.findById(tourPackId);
+    }
+
+    if (tourPackId) {
+      tourPack = await TourPack.findById(tourPackId);
       if (!tourPack) {
         return res.status(404).json({ message: 'Selected tour package was not found' });
       }
 
-      // Backend validation for group size
       if (parsedGuests > tourPack.maxGroupSize) {
-        return res.status(400).json({ 
-          message: `The number of attendees (${parsedGuests}) exceeds the maximum group size for this tour (${tourPack.maxGroupSize}).` 
+        return res.status(400).json({
+          message: `The number of attendees (${parsedGuests}) exceeds the maximum group size for this tour (${tourPack.maxGroupSize}).`,
         });
       }
 
-      packageAmount = packageAmountFromReq || (tourPack.price * parsedGuests);
-    } else {
-      return res.status(400).json({ message: 'Either a hotel or a tour package must be selected' });
+      packageAmount = Number(packageAmountFromReq) || (tourPack.price * parsedGuests);
     }
 
     if (transportationId) {
@@ -177,37 +179,49 @@ const createBooking = async (req, res) => {
     const serviceFee = Math.round(baseAmount * 0.08);
     const totalAmount = baseAmount + transportationAmount + serviceFee;
 
-    const booking = await Booking.create({
-      bookingReference: generateReference(),
-      user: req.user ? req.user._id : null,
-      guestName: normalizedGuestName,
-      email: normalizedEmail,
-      phone: normalizedPhone,
-      destination: normalizedDestination,
-      hotel: hotelId || null,
-      tourPack: tourPackId || null,
-      transportation: transportationId || null,
-      checkInDate: checkInDate || null,
-      checkOutDate: checkOutDate || null,
-      guests: parsedGuests,
-      adults: parsedAdults,
-      children: parsedChildren,
-      rooms: hotelId ? parsedRooms : 0,
-      nights: hotelId ? calculateNights(checkInDate, checkOutDate) : 0,
-      stayAmount,
-      packageAmount,
-      transportationAmount,
-      serviceFee,
-      totalAmount,
-      travelStyle,
-      specialRequests,
-      itineraryNotes: Array.isArray(itineraryNotes) ? itineraryNotes : [],
-    });
+    try {
+      if (hotel) {
+        hotel.availableRooms -= parsedRooms;
+        await hotel.save();
+      }
 
-    // Hotel availability was already updated above if hotelId was present.
+      const booking = await Booking.create({
+        bookingReference: generateReference(),
+        user: req.user ? req.user._id : null,
+        guestName: normalizedGuestName,
+        email: normalizedEmail,
+        phone: normalizedPhone,
+        destination: normalizedDestination,
+        hotel: hotelId || null,
+        tourPack: tourPackId || null,
+        transportation: transportationId || null,
+        checkInDate: checkInDate || null,
+        checkOutDate: checkOutDate || null,
+        guests: parsedGuests,
+        adults: parsedAdults,
+        children: parsedChildren,
+        rooms: hotelId ? parsedRooms : 0,
+        nights: hotelId ? nights : 0,
+        stayAmount,
+        packageAmount,
+        transportationAmount,
+        serviceFee,
+        totalAmount,
+        travelStyle,
+        specialRequests,
+        itineraryNotes: Array.isArray(itineraryNotes) ? itineraryNotes : [],
+      });
 
-    const populatedBooking = await Booking.findById(booking._id).populate(BOOKING_POPULATE);
-    res.status(201).json(populatedBooking);
+      const populatedBooking = await Booking.findById(booking._id).populate(BOOKING_POPULATE);
+      return res.status(201).json(populatedBooking);
+    } catch (creationError) {
+      if (hotel) {
+        hotel.availableRooms += parsedRooms;
+        await hotel.save();
+      }
+
+      throw creationError;
+    }
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
