@@ -9,14 +9,15 @@ import {
   TouchableOpacity,
   SafeAreaView,
   TextInput,
-  Image,
   Platform,
   Modal,
 } from 'react-native';
+import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import { API_BASE } from '../src/config';
+import { resolveImageUrl } from '../src/utils';
 import { getAuthHeaders, getAuthToken, getAuthRole, clearAuthSession } from '../src/auth';
 
 interface UserProfile {
@@ -188,7 +189,7 @@ export default function UserProfileScreen() {
       });
       if (response.ok) {
         const data = await response.json();
-        setMyReviews(data);
+        setMyReviews(data.data || []);
       }
     } catch (err) {
       console.error('Failed to fetch reviews:', err);
@@ -205,7 +206,7 @@ export default function UserProfileScreen() {
       const data = await response.json();
 
       if (response.ok) {
-        setMyBookings(Array.isArray(data) ? data : []);
+        setMyBookings(Array.isArray(data.data) ? data.data : []);
       } else {
         console.error('Failed to fetch user bookings:', data?.message || response.status);
       }
@@ -241,9 +242,10 @@ export default function UserProfileScreen() {
       });
       if (response.ok) {
         const data = await response.json();
-        setAvailableBookings(data);
-        if (data.length > 0) {
-          setSelectedBooking(data[0]._id);
+        const bookingsList = data.data || [];
+        setAvailableBookings(bookingsList);
+        if (bookingsList.length > 0) {
+          setSelectedBooking(bookingsList[0]._id);
         } else {
           setSelectedBooking('');
         }
@@ -635,9 +637,9 @@ export default function UserProfileScreen() {
             <View style={styles.profileCard}>
               <View style={styles.avatarContainer}>
                 {selectedPhoto ? (
-                  <Image source={{ uri: selectedPhoto }} style={styles.profileImage} />
+                  <Image source={{ uri: selectedPhoto }} style={styles.profileImage} contentFit="cover" transition={300} />
                 ) : user.profilePhoto ? (
-                  <Image source={{ uri: `${API_BASE}${user.profilePhoto}` }} style={styles.profileImage} />
+                  <Image source={{ uri: resolveImageUrl(user.profilePhoto) ?? undefined }} style={styles.profileImage} contentFit="cover" transition={300} />
                 ) : (
                   <View style={styles.avatar}>
                     <Text style={styles.avatarText}>{editedName.charAt(0).toUpperCase()}</Text>

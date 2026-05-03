@@ -300,7 +300,7 @@ export default function BookingScreen() {
     const transportAmount = tourPack && tourPack.distance && selectedVehicle
       ? selectedVehicle.price * tourPack.distance
       : selectedVehicle?.price || 0;
-    const serviceFee = Math.round((stayAmount + packageAmount) * 0.08);
+    const serviceFee = Math.round((stayAmount + packageAmount + transportAmount) * 0.05);
     const total = stayAmount + packageAmount + transportAmount + serviceFee;
 
     return {
@@ -478,6 +478,11 @@ export default function BookingScreen() {
         headers,
         body: JSON.stringify({
           ...formData,
+          adults: bookingPreview.adults,
+          children: bookingPreview.children,
+          guests: bookingPreview.guests,
+          rooms: bookingPreview.rooms,
+          nights: bookingPreview.nights,
           hotel: hotelId || null,
           tourPack: tourPackId || null,
           transportation: selectedTransport || null,
@@ -496,7 +501,7 @@ export default function BookingScreen() {
       if (response.ok) {
         router.push({
           pathname: '/receipt',
-          params: { bookingId: data._id },
+          params: { bookingId: data.data._id },
         });
       } else {
         showFeedback('error', 'Booking Failed', data.message || 'Could not create booking.');

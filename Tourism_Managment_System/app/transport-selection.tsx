@@ -15,6 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import { Image } from 'expo-image';
 import { API_BASE } from '../src/config';
+import { resolveImageUrl } from '../src/utils';
 
 // Configuration for API URL
 const API_URL = `${API_BASE}/api/transportation`;
@@ -88,7 +89,7 @@ export default function TransportSelectionScreen() {
       {/* Hero Image Section */}
       <View style={styles.cardHero}>
         {item.vehicleImage ? (
-          <Image source={{ uri: item.vehicleImage }} style={styles.heroImage} contentFit="cover" transition={500} />
+          <Image source={{ uri: resolveImageUrl(item.vehicleImage) ?? undefined }} style={styles.heroImage} contentFit="cover" transition={500} />
         ) : (
           <View style={styles.heroPlaceholder}>
             <Ionicons name={getVehicleIcon(item.vehicleType) as any} size={64} color="#003580" />

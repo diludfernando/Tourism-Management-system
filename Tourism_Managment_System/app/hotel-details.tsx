@@ -15,6 +15,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { API_BASE } from '../src/config';
+import { resolveImageUrl } from '../src/utils';
 
 const API_URL = `${API_BASE}/api/hotels`;
 const { width } = Dimensions.get('window');
@@ -161,7 +162,7 @@ export default function HotelDetailsScreen() {
       <ScrollView bounces={false} contentContainerStyle={styles.scrollContent}>
         <View style={styles.hero}>
           {hotel.image ? (
-            <Image source={{ uri: hotel.image }} style={styles.heroImage} contentFit="cover" />
+            <Image source={{ uri: resolveImageUrl(hotel.image) ?? undefined }} style={styles.heroImage} contentFit="cover" />
           ) : (
             <View style={styles.heroPlaceholder}>
               <Ionicons name="image-outline" size={64} color="#CBD5E1" />
@@ -291,7 +292,7 @@ export default function HotelDetailsScreen() {
                     <View style={styles.reviewHeader}>
                       <View style={styles.reviewerInfo}>
                         {review.user?.profilePhoto ? (
-                          <Image source={{ uri: `${API_BASE}${review.user.profilePhoto}` }} style={styles.reviewerAvatar} />
+                          <Image source={{ uri: resolveImageUrl(review.user.profilePhoto) ?? undefined }} style={styles.reviewerAvatar} />
                         ) : (
                           <View style={styles.reviewerAvatarFallback}>
                             <Text style={styles.reviewerInitial}>{review.user?.name?.charAt(0) || 'U'}</Text>

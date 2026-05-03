@@ -9,6 +9,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import { API_BASE } from '../../src/config';
+import { resolveImageUrl } from '../../src/utils';
 import { getAuthToken } from '../../src/auth';
 
 const { height, width } = Dimensions.get('window');
@@ -100,7 +101,7 @@ export default function TourPackDetailScreen() {
           <Image
             source={
               tourPack.image
-                ? { uri: `${API_BASE}${tourPack.image}` }
+                ? { uri: resolveImageUrl(tourPack.image) ?? undefined }
                 : require('@/assets/images/travel-hero.png')
             }
             style={styles.heroImage}
@@ -216,7 +217,7 @@ export default function TourPackDetailScreen() {
                           <View style={styles.carGallerySlide}>
                             <TouchableOpacity activeOpacity={0.95} onPress={() => setIsGalleryViewerVisible(true)}>
                               <Image
-                                source={{ uri: `${API_BASE}${item.url}` }}
+                                source={{ uri: resolveImageUrl(item.url) ?? undefined }}
                                 style={styles.carGalleryMainImage}
                                 contentFit="cover"
                                 transition={350}
@@ -254,7 +255,7 @@ export default function TourPackDetailScreen() {
                           style={[styles.carThumbnail, selectedGalleryIndex === index && styles.carThumbnailActive]}
                         >
                           <Image
-                            source={{ uri: `${API_BASE}${image.url}` }}
+                            source={{ uri: resolveImageUrl(image.url) ?? undefined }}
                             style={styles.carThumbnailImage}
                             contentFit="cover"
                           />
@@ -407,7 +408,7 @@ export default function TourPackDetailScreen() {
             }}
             renderItem={({ item }) => (
               <View style={styles.viewerSlide}>
-                <Image source={{ uri: `${API_BASE}${item.url}` }} style={styles.viewerImage} contentFit="contain" transition={250} />
+                <Image source={{ uri: resolveImageUrl(item.url) ?? undefined }} style={styles.viewerImage} contentFit="contain" transition={250} />
               </View>
             )}
           />

@@ -114,7 +114,7 @@ export default function BookingManagementScreen() {
       const response = await fetch(API_URL, { headers });
       const data = await parseResponseBody(response);
       if (response.ok) {
-        setBookings(Array.isArray(data) ? data : []);
+        setBookings(Array.isArray(data.data) ? data.data : []);
       } else {
         setFeedback({
           type: 'error',
@@ -177,11 +177,12 @@ export default function BookingManagementScreen() {
         });
         return;
       }
-      setBookings((current) => current.map((booking) => (booking._id === id ? data : booking)));
+      const updatedBooking = data.data || data;
+      setBookings((current) => current.map((booking) => (booking._id === id ? updatedBooking : booking)));
       setFeedback({
         type: 'success',
         title: 'Booking Updated',
-        message: `Booking ${data?.bookingReference || ''} was updated successfully.`.trim(),
+        message: `Booking ${updatedBooking?.bookingReference || ''} was updated successfully.`.trim(),
       });
     } catch {
       setFeedback({

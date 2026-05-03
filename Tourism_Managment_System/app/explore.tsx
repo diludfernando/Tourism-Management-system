@@ -18,6 +18,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { API_BASE } from '../src/config';
+import { resolveImageUrl } from '../src/utils';
 import { getAuthToken, getAuthRole, getAuthHeaders } from '../src/auth';
 
 const API_URL = `${API_BASE}/api/tourpacks`;
@@ -126,7 +127,7 @@ export default function Explore() {
         }}
       >
         {item.image ? (
-          <Image source={{ uri: `${API_BASE}${item.image}` }} style={styles.cardImage} contentFit="cover" transition={500} />
+          <Image source={{ uri: resolveImageUrl(item.image) ?? undefined }} style={styles.cardImage} contentFit="cover" transition={500} />
         ) : (
           <View style={styles.cardImageFallback}>
             <Ionicons name="map-outline" size={52} color="#CBD5E1" />
@@ -179,7 +180,7 @@ export default function Explore() {
         <TouchableOpacity onPress={() => router.push('/profile')} style={styles.profileButton}>
           {userProfile?.profilePhoto ? (
             <Image 
-              source={{ uri: `${API_BASE}${userProfile.profilePhoto}` }} 
+              source={{ uri: resolveImageUrl(userProfile.profilePhoto) ?? undefined }} 
               style={styles.profileButtonImage}
               contentFit="cover"
               transition={300}

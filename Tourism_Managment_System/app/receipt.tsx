@@ -114,7 +114,7 @@ export default function ReceiptScreen() {
       const data = await response.json();
 
       if (response.ok) {
-        setBooking(data);
+        setBooking(data.data);
       } else {
         setError(data.message || 'Failed to load receipt');
       }
@@ -262,7 +262,7 @@ export default function ReceiptScreen() {
               )}
 
               <View style={styles.priceRow}>
-                <Text style={styles.priceLabel}>Service Fee (8%)</Text>
+                <Text style={styles.priceLabel}>Service Fee (5%)</Text>
                 <Text style={styles.priceValue}>{formatPrice(booking.serviceFee)}</Text>
               </View>
 

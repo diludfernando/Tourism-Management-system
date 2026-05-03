@@ -15,6 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import { Image } from 'expo-image';
 import { API_BASE } from '../src/config';
+import { resolveImageUrl } from '../src/utils';
 import { getAuthHeaders, getAuthRole } from '../src/auth';
 
 const API_URL = `${API_BASE}/api/hotels`;
@@ -146,7 +147,7 @@ export default function HotelListScreen() {
       {/* Hero Image Section */}
       <View style={styles.cardHero}>
         {item.image ? (
-          <Image source={{ uri: item.image }} style={styles.heroImage} contentFit="cover" transition={500} />
+          <Image source={{ uri: resolveImageUrl(item.image) ?? undefined }} style={styles.heroImage} contentFit="cover" transition={500} />
         ) : (
           <View style={styles.heroPlaceholder}>
             <Ionicons name="business-outline" size={64} color="#003580" />
