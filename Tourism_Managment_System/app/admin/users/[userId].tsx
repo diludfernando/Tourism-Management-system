@@ -3,6 +3,7 @@ import {
   ActivityIndicator,
   Alert,
   Image,
+  Platform,
   SafeAreaView,
   ScrollView,
   StyleSheet,
@@ -167,38 +168,48 @@ export default function UserDetailsScreen() {
   const handleDeleteUser = () => {
     if (!user) return;
 
-    Alert.alert('Delete User', `Are you sure you want to permanently delete ${user.name}?`, [
+    const confirmationMessage = `Are you sure you want to permanently delete ${user.name}?`;
+
+    const runDelete = async () => {
+      try {
+        setDeletingUser(true);
+        const headers = await getAuthHeaders();
+        const response = await fetch(`${API_URL}/${userId}`, {
+          method: 'DELETE',
+          headers,
+        });
+
+        if (!response.ok) {
+          const data = await response.json();
+          throw new Error(data?.message || 'Failed to delete user');
+        }
+
+        router.back();
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Unable to delete user';
+        if (Platform.OS === 'web' && typeof globalThis.alert === 'function') {
+          globalThis.alert(message);
+        } else {
+          Alert.alert('Error', message);
+        }
+      } finally {
+        setDeletingUser(false);
+      }
+    };
+
+    if (Platform.OS === 'web' && typeof globalThis.confirm === 'function') {
+      const confirmed = globalThis.confirm(`Delete User\n\n${confirmationMessage}`);
+      if (!confirmed) return;
+      runDelete();
+      return;
+    }
+
+    Alert.alert('Delete User', confirmationMessage, [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Delete',
         style: 'destructive',
-        onPress: async () => {
-          try {
-            setDeletingUser(true);
-            const headers = await getAuthHeaders();
-            const response = await fetch(`${API_URL}/${userId}`, {
-              method: 'DELETE',
-              headers,
-            });
-
-            if (!response.ok) {
-              const data = await response.json();
-              throw new Error(data?.message || 'Failed to delete user');
-            }
-
-            Alert.alert('Success', 'User deleted successfully', [
-              {
-                text: 'OK',
-                onPress: () => router.back(),
-              },
-            ]);
-          } catch (err) {
-            const message = err instanceof Error ? err.message : 'Unable to delete user';
-            Alert.alert('Error', message);
-          } finally {
-            setDeletingUser(false);
-          }
-        },
+        onPress: runDelete,
       },
     ]);
   };

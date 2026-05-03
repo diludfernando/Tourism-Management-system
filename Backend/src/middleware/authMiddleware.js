@@ -22,6 +22,10 @@ const protect = async (req, res, next) => {
         return res.status(401).json({ success: false, message: 'Not authorized, user not found' });
       }
 
+      if (req.user.isActive === false) {
+        return res.status(403).json({ success: false, message: 'Your account has been disabled' });
+      }
+
       next();
     } catch (error) {
       console.error('Auth middleware error:', error.message);

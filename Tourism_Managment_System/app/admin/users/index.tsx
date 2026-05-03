@@ -2,8 +2,10 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Platform,
   SafeAreaView,
   ScrollView,
+  Switch,
   StyleSheet,
   Text,
   TextInput,
@@ -23,6 +25,7 @@ type UserItem = {
   email: string;
   phoneNumber?: string;
   role: 'user' | 'admin';
+  isActive?: boolean;
   profilePhoto?: string;
   createdAt?: string;
   updatedAt?: string;
@@ -38,7 +41,9 @@ export default function AdminUsersScreen() {
   const [searchText, setSearchText] = useState('');
   const [hasVerifiedRole, setHasVerifiedRole] = useState(false);
   const [currentAdminId, setCurrentAdminId] = useState<string | null>(null);
+  const [updatingStatusId, setUpdatingStatusId] = useState<string | null>(null);
   const [activeFilter, setActiveFilter] = useState<'all' | 'admin' | 'user'>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'disabled'>('all');
   const isAdminMode = admin === 'true';
 
   useEffect(() => {
@@ -102,6 +107,13 @@ export default function AdminUsersScreen() {
       result = result.filter((user) => user.role === activeFilter);
     }
 
+    if (statusFilter !== 'all') {
+      result = result.filter((user) => {
+        const isUserActive = user.isActive !== false;
+        return statusFilter === 'active' ? isUserActive : !isUserActive;
+      });
+    }
+
     const query = searchText.trim().toLowerCase();
     if (!query) return result;
 
@@ -113,10 +125,73 @@ export default function AdminUsersScreen() {
         user.role.toLowerCase().includes(query)
       );
     });
-  }, [searchText, users, activeFilter]);
+  }, [searchText, users, activeFilter, statusFilter]);
 
   const adminCount = useMemo(() => users.filter((user) => user.role === 'admin').length, [users]);
   const userCount = useMemo(() => users.length - adminCount, [users.length, adminCount]);
+  const activeUsersCount = useMemo(() => users.filter((user) => user.isActive !== false).length, [users]);
+  const disabledUsersCount = useMemo(() => users.filter((user) => user.isActive === false).length, [users]);
+
+  const handleToggleUserStatus = useCallback(async (user: UserItem) => {
+    const currentlyActive = user.isActive !== false;
+    const nextIsActive = !currentlyActive;
+    const actionLabel = nextIsActive ? 'enable' : 'disable';
+    const confirmationTitle = `${nextIsActive ? 'Enable' : 'Disable'} User`;
+    const confirmationMessage = `Are you sure you want to ${actionLabel} ${user.name}?`;
+
+    const runToggle = async () => {
+      try {
+        setUpdatingStatusId(user._id);
+        const headers = await getAuthHeaders();
+        const response = await fetch(`${API_URL}/${user._id}/status`, {
+          method: 'PATCH',
+          headers: {
+            ...headers,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ isActive: nextIsActive }),
+        });
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data?.message || `Failed to ${actionLabel} user`);
+        }
+
+        setUsers((prevUsers) =>
+          prevUsers.map((item) => (item._id === user._id ? { ...item, isActive: data?.isActive } : item))
+        );
+      } catch (error) {
+        const message = error instanceof Error ? error.message : `Unable to ${actionLabel} user`;
+        if (Platform.OS === 'web' && typeof globalThis.alert === 'function') {
+          globalThis.alert(message);
+        } else {
+          Alert.alert('Error', message);
+        }
+      } finally {
+        setUpdatingStatusId(null);
+      }
+    };
+
+    if (Platform.OS === 'web' && typeof globalThis.confirm === 'function') {
+      const confirmed = globalThis.confirm(`${confirmationTitle}\n\n${confirmationMessage}`);
+      if (!confirmed) return;
+      runToggle();
+      return;
+    }
+
+    Alert.alert(
+      confirmationTitle,
+      confirmationMessage,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: nextIsActive ? 'Enable' : 'Disable',
+          style: nextIsActive ? 'default' : 'destructive',
+          onPress: runToggle,
+        },
+      ]
+    );
+  }, []);
 
 
 
@@ -199,6 +274,35 @@ export default function AdminUsersScreen() {
           ) : null}
         </View>
 
+        <View style={styles.statusFilterRow}>
+          <TouchableOpacity
+            style={[styles.statusFilterButton, statusFilter === 'all' && styles.statusFilterButtonActive]}
+            onPress={() => setStatusFilter('all')}
+          >
+            <Text style={[styles.statusFilterButtonText, statusFilter === 'all' && styles.statusFilterButtonTextActive]}>
+              All ({users.length})
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.statusFilterButton, statusFilter === 'active' && styles.statusFilterButtonActive]}
+            onPress={() => setStatusFilter('active')}
+          >
+            <Text style={[styles.statusFilterButtonText, statusFilter === 'active' && styles.statusFilterButtonTextActive]}>
+              Active ({activeUsersCount})
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.statusFilterButton, statusFilter === 'disabled' && styles.statusFilterButtonActive]}
+            onPress={() => setStatusFilter('disabled')}
+          >
+            <Text style={[styles.statusFilterButtonText, statusFilter === 'disabled' && styles.statusFilterButtonTextActive]}>
+              Disabled ({disabledUsersCount})
+            </Text>
+          </TouchableOpacity>
+        </View>
+
         {loading ? (
           <View style={styles.loadingBox}>
             <ActivityIndicator color="#003580" />
@@ -249,6 +353,27 @@ export default function AdminUsersScreen() {
                   <Text style={styles.cardMetaText}>
                     Joined {user.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'recently'}
                   </Text>
+                </View>
+
+                <View style={styles.statusToggleWrap}>
+                  <View style={styles.statusTextWrap}>
+                    <Text style={styles.statusLabel}>Status</Text>
+                    <Text style={[styles.statusValue, user.isActive === false ? styles.statusValueInactive : styles.statusValueActive]}>
+                      {user.isActive === false ? 'Disabled' : 'Active'}
+                    </Text>
+                  </View>
+
+                  {updatingStatusId === user._id ? (
+                    <ActivityIndicator size="small" color="#003580" />
+                  ) : (
+                    <Switch
+                      value={user.isActive !== false}
+                      onValueChange={() => handleToggleUserStatus(user)}
+                      disabled={currentAdminId === user._id}
+                      trackColor={{ false: '#FECACA', true: '#BBF7D0' }}
+                      thumbColor={user.isActive === false ? '#DC2626' : '#059669'}
+                    />
+                  )}
                 </View>
               </View>
 
@@ -403,6 +528,32 @@ const styles = StyleSheet.create({
     color: '#111827',
     padding: 0,
   },
+  statusFilterRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 14,
+  },
+  statusFilterButton: {
+    flex: 1,
+    backgroundColor: '#EEF2FF',
+    borderRadius: 10,
+    paddingVertical: 10,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  statusFilterButtonActive: {
+    backgroundColor: '#003580',
+    borderColor: '#003580',
+  },
+  statusFilterButtonText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#374151',
+  },
+  statusFilterButtonTextActive: {
+    color: '#FFFFFF',
+  },
   loadingBox: {
     backgroundColor: '#FFF',
     borderRadius: 16,
@@ -524,13 +675,36 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '700',
   },
+  statusToggleWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  statusTextWrap: {
+    alignItems: 'flex-end',
+  },
+  statusLabel: {
+    fontSize: 11,
+    color: '#6B7280',
+    fontWeight: '600',
+  },
+  statusValue: {
+    fontSize: 12,
+    fontWeight: '700',
+    marginTop: 2,
+  },
+  statusValueActive: {
+    color: '#047857',
+  },
+  statusValueInactive: {
+    color: '#991B1B',
+  },
   updatedText: {
     color: '#6B7280',
     fontSize: 12,
   },
   actionButtonsRow: {
     flexDirection: 'row',
-    gap: 10,
     marginTop: 12,
   },
   viewButton: {

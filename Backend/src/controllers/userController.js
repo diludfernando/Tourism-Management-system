@@ -36,6 +36,10 @@ const authUser = async (req, res) => {
     const user = await User.findOne({ email: normalizedEmail });
 
     if (user && (await user.matchPassword(password))) {
+      if (user.isActive === false) {
+        return res.status(403).json({ message: 'Your account has been disabled. Please contact an administrator.' });
+      }
+
       res.json({
         _id: user._id,
         name: user.name,
@@ -431,6 +435,40 @@ const updateUser = async (req, res) => {
   }
 };
 
+// @desc    Enable or disable a user account
+// @route   PATCH /api/users/:id/status
+// @access  Private/Admin
+const updateUserStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { isActive } = req.body;
+
+    if (typeof isActive !== 'boolean') {
+      return res.status(400).json({ message: 'isActive must be true or false' });
+    }
+
+    const user = await User.findById(id);
+
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    if (req.user && req.user._id && String(req.user._id) === String(user._id) && isActive === false) {
+      return res.status(400).json({ message: 'You cannot disable your own account' });
+    }
+
+    const updatedUser = await User.findByIdAndUpdate(
+      id,
+      { isActive },
+      { new: true, runValidators: true }
+    ).select('-password');
+
+    res.json(updatedUser);
+  } catch (error) {
+    res.status(500).json({ message: 'Server error while updating user status' });
+  }
+};
+
 // @desc    Change user password
 // @route   PUT /api/users/change-password
 // @access  Private
@@ -637,6 +675,7 @@ module.exports = {
   updateProfile,
   getUserById,
   updateUser,
+  updateUserStatus,
   changePassword,
   forgotPassword,
   verifyOTP,
